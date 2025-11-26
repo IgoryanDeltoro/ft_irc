@@ -1,21 +1,23 @@
 NAME = ircserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD -pedantic
-SRC = main.cpp
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD #-pedantic
+SRC = main.cpp Server.cpp Client.cpp
+BUILD = ./build
 
-OBJ = $(SRC:.cpp=.o)
+OBJ = $(SRC:%.cpp=$(BUILD)/%.o)
 DEP = $(OBJ:.o=.d)
 all: $(NAME)
 
 $(NAME): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
-%.o: %.cpp
+$(BUILD)/%.o: %.cpp
+	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	-rm -f $(OBJ) $(DEP)
+	-rm -rf $(BUILD)
 
 fclean: clean
 	-rm -f $(NAME)
