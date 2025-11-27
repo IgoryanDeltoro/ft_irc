@@ -33,6 +33,7 @@ class Server {
         void read_message_from(Client *);
         void process_line(Client *, std::string);
         void clean_fd(int);
+        void send_message_to_client(int, std::string); 
 
     public:
         Server(const std::string &port, const std::string &password);

@@ -136,6 +136,7 @@ void Server::eccept_new_fd() {
         _pfds.push_back(pa);
 
         std::cout << "Accepted fd=" << new_fd << std::endl;
+        send_message_to_client(new_fd, "Welcome to IRC chat.\r\n");
     }
 }
 
@@ -197,6 +198,12 @@ void Server::clean_fd(int fd) {
         }
     }
 
+}
+
+void Server::send_message_to_client(int fd, std::string msg) {
+    if (fd < 0) return ;
+
+    send(fd, msg.c_str(), msg.length(), 0);
 }
 
 void Server::process_line(Client *c, std::string line) {
