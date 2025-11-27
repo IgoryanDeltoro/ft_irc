@@ -146,6 +146,7 @@ void Server::read_message_from(Client *c) {
 
     while (1) {
         ssize_t  bytes = recv(c->getFD(), buff, sizeof(buff), 0);
+
         if (bytes > 0) {
             c->getRecvBuff().append(buff, buff + bytes);
 
@@ -160,7 +161,6 @@ void Server::read_message_from(Client *c) {
                 if (!line.empty() && line[line.size() - 1] == '\r') { 
                     line.erase(line.size() - 1);
                 }
-                
                 // handle process line
                 process_line(c, line); 
             }

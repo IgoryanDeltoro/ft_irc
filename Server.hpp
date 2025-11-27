@@ -3,12 +3,16 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include "Parser.hpp"
 #include "Client.hpp"
+#include "Channel.hpp"
 
 #define BECKLOG 10
 #define BUFFER 4096
 
+class Parser;
 class Client;
+class Channel;
 
 class Server {
     private:
@@ -17,6 +21,8 @@ class Server {
         std::string                 _password;
         std::vector<struct pollfd>  _pfds;
         std::map<int, Client*>      _clients;
+        std::map<int, Channel*>      _channels;
+        Parser parser;
 
         Server();
         Server(const Server &other);
