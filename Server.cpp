@@ -35,7 +35,14 @@ Server::Server(const std::string &port, const std::string &password) : _listen_f
     _pfds.push_back(p);
 }
 
-Server::~Server() {}
+Server::~Server() {
+    std::map<int, Client*>::iterator it = _clients.begin();
+    for (; it != _clients.end(); ++it) {
+        close(it->first);
+        delete it->second;
+    }
+    if (_listen_fd >= 0) close(_listen_fd);
+}
 
 int Server::create_and_bind() {
     struct addrinfo hints;
@@ -91,6 +98,7 @@ void Server::run() {
 
                 if (p.revents & (POLLERR | POLLHUP | POLLNVAL)) {
                     std::cout << "Clean filedescriptors\n";
+                    clean_fd(p.fd);
                 } else {
                     if (p.revents & POLLIN) read_message_from(c);
                     if (p.revents & POLLOUT) std::cout << "write outputs\n";
@@ -158,13 +166,37 @@ void Server::read_message_from(Client *c) {
             }
         } else if (bytes == 0) {
             // clean file descriptors
-                break;
+            clean_fd(c->getFD());
+            break;
         } else {
             if (errno & (EAGAIN | EWOULDBLOCK)) break;
             // clean file descriptors
+            clean_fd(c->getFD());
             break;
         }
     }
+}
+
+void Server::clean_fd(int fd) {
+    std::map<int, Client*>::iterator it = _clients.find(fd);
+    if (it == _clients.end()) return ;
+
+    std::cout << "User " << it->second->getNick() << " leave session" << std::endl;
+    
+    // don't foget to remove from channels
+
+    close(it->first);
+    delete it->second;
+    _clients.erase(it);
+
+    // remove from _pfds
+    for (size_t i = 0; i < _pfds.size(); ++i) {
+        if (_pfds[i].fd == fd) {
+            _pfds.erase(_pfds.begin() + i);
+            break;
+        }
+    }
+
 }
 
 void Server::process_line(Client *c, std::string line) {

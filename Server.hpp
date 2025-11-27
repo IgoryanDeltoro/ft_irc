@@ -26,6 +26,7 @@ class Server {
         void eccept_new_fd();
         void read_message_from(Client *);
         void process_line(Client *, std::string);
+        void clean_fd(int);
 
     public:
         Server(const std::string &port, const std::string &password);
