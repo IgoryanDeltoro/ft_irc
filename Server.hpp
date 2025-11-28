@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <map>
 #include "Parser.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"

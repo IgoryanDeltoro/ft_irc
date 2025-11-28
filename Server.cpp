@@ -648,7 +648,14 @@ void Server::sendError(Client *c, Error err, const std::string &arg)
         message.replace(pos, 6, arg);
     if ((pos = message.find("<channel>")) != std::string::npos)
         message.replace(pos, 9, arg);
-    std::string out = ":server " + std::to_string(err) + " " + nick + " " + message + "\r\n";
+
+
+    std::string s;
+    std::stringstream out1;
+    out1 << err;
+    s = out1.str();
+
+    std::string out = ":server " + s + " " + nick + " " + message + "\r\n";
     send_message_to_client(c->getFD(), out);
 }
 
