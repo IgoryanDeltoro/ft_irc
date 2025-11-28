@@ -101,7 +101,7 @@ void Server::run() {
                     clean_fd(p.fd);
                 } else {
                     if (p.revents & POLLIN) read_message_from(c);
-                    if (p.revents & POLLOUT) std::cout << "write outputs\n";
+                    if (p.revents & POLLOUT) send_msg_to(c);
                 }
             }
             p.revents = 0;
@@ -178,6 +178,40 @@ void Server::read_message_from(Client *c) {
     }
 }
 
+ssize_t Server::send_message_to_client(int fd, std::string msg) {
+    if (fd < 0) return -1;
+    return send(fd, msg.c_str(), msg.length(), 0);
+}
+
+void Server::send_msg_to(Client *c) {
+    while (!c->getMessage().empty()) {
+        std::string s = c->getMessage().front();
+        c->getMessage().pop_front();
+        ssize_t n = send_message_to_client(c->getFD(), s);
+        if (n < 0) {
+            if (errno & (EAGAIN | EWOULDBLOCK)) {
+                break;
+            } else {
+                clean_fd(c->getFD());
+                return;
+            }
+        }
+        if (static_cast<size_t>(n) < s.size()) {
+            s.erase(0, n);
+            break;
+        }
+
+        // set poll events
+        for (size_t i = 0; i < _pfds.size(); i++) {
+            if (c->getFD() == _pfds[i].fd) {
+                _pfds[i].events = POLLIN;
+                if (!c->getMessage().empty()) _pfds[i].events |= POLLOUT;
+                break;
+            }
+        }
+    }
+}
+
 void Server::clean_fd(int fd) {
     std::map<int, Client*>::iterator it = _clients.find(fd);
     if (it == _clients.end()) return ;
@@ -200,13 +234,37 @@ void Server::clean_fd(int fd) {
 
 }
 
-void Server::send_message_to_client(int fd, std::string msg) {
-    if (fd < 0) return ;
-
-    send(fd, msg.c_str(), msg.length(), 0);
-}
-
 void Server::process_line(Client *c, std::string line) {
     std::cout << "c->buff: " << c->getRecvBuff() << std::endl;
     std::cout << "line: " << line << std::endl;
+
+    if (c->getFD() == 4) {
+        c->setNick("Ihor");
+        _nicks["Ihor"] = c;
+    } 
+    if (c->getFD() == 5) {
+        c->setNick("Dima");
+        _nicks["Dima"] = c;
+    }
+
+    if (c->getNick() == "Ihor")
+        handlePRIVMSG(c, "Dima", line);
+    if (c->getNick() == "Dima")
+        handlePRIVMSG(c, "Ihor", line);
+}
+
+void Server::handlePRIVMSG(Client *c, const std::string &target, const std::string &message)
+{
+    if (target.empty()) return;
+
+    std::map<std::string, Client*>::iterator it = _nicks.find(target);
+
+    if (it == _nicks.end()) return;
+    it->second->enqueue_reply(std::string(":") + (c->getNick().empty() ? "*" : c->getNick()) + " PRIVMSG " + target + " :" + message + "\r\n");
+    for (size_t i = 0; i < _pfds.size(); ++i) {
+        if (_pfds[i].fd == it->second->getFD()) {
+            _pfds[i].events |= POLLOUT;
+            break;
+        }
+    }
 }
