@@ -42,6 +42,11 @@ Server::~Server() {
         delete it->second;
     }
     if (_listen_fd >= 0) close(_listen_fd);
+    
+    for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+    {
+        delete it->second;
+    }
 }
 
 int Server::create_and_bind() {
