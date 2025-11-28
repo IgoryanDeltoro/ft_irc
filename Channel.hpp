@@ -20,16 +20,16 @@ class Channel {
         bool _k;
         //bool o: Give/take channel operator privilege
         bool _l;
-    
-        std::set<int>  _operators;
-        std::map<int, Client*>  _users;
-        std::set<int> _invited;
+
+        std::set<std::string> _operators;
+        std::map<std::string, Client*>  _users;
+        std::set<std::string> _invited;
 
     public:
         Channel(const std::string &name, Client *client) : _name(name), _topic(""), _password(""), _userLimit(-1), _i(false), _t(false), _k(false), _l(false)
         {
             addUser(client);
-            addOperator(client->getFD());
+            addOperator(client->getNick());
         }
         ~Channel() {}
 
@@ -38,52 +38,52 @@ class Channel {
         bool isK() const { return _k; }
         bool isL() const { return _l; }
 
-        bool isUser(Client *c) const { return _users.count(c->getFD()) != 0; }
-        bool isOperator(int fd) const { return _operators.count(fd) != 0; }
+        bool isUser(const std::string &nick) const { return _users.count(nick) != 0; }
+        bool isOperator(const std::string &nick) const { return _operators.count(nick) != 0; }
 
-        void addOperator(int fd)
+        void addOperator(const std::string &nick)
         {
-            _operators.insert(fd);
+            _operators.insert(nick);
         };
 
-        void removeOperator(int fd)
+        void removeOperator(const std::string &nick)
         {
-            _operators.erase(fd);
+            _operators.erase(nick);
         };
 
         void addUser(Client *c)
         {
-            _users[c->getFD()] = c;
+            _users[c->getNick()] = c;
         }
 
         void removeUser(Client *c)
         {
-            _users.erase(c->getFD());
-            _operators.erase(c->getFD()); // если был оператором
-            _invited.erase(c->getFD());   // если был приглашён
+            _users.erase(c->getNick());
+            _operators.erase(c->getNick()); // если был оператором
+            _invited.erase(c->getNick());   // если был приглашён
         }
 
-        bool isInvited(int fd) const
+        bool isInvited(const std::string &nick) const
         {
-            return _invited.count(fd) != 0;
+            return _invited.count(nick) != 0;
         }
 
-        void addInvite(int fd)
+        void addInvite(const std::string &nick)
         {
-            _invited.insert(fd);
+            _invited.insert(nick);
         }
 
-        const std::set<int> &getInvited() const
+        const std::set<std::string> &getInvited() const
         {
             return _invited;
         }
 
-        const std::set<int> &getOperators() const
+        const std::set<std::string> &getOperators() const
         {
             return _operators;
         }
 
-        const std::map<int, Client *> &getUsers() const
+        const std::map<std::string, Client *> &getUsers() const
         {
             return _users;
         }
@@ -104,18 +104,10 @@ class Channel {
             return _topic;
         }
 
-        // getters
-        //         int         getFD() const;
-        //         std::string getNick() const;
-        //         std::string getUser() const;
-        //         std::string &getRecvBuff();
-        //         bool        getRegStatus() const;
-        //         bool        getPassStatus() const;
-
-        //         // setters
-        //         void setFD(int fd);
-        //         void setRegStatus();
-        //         void setPassStatus();
-        };
+        void setTopic(const std::string &topic)
+        {
+            _topic = topic;
+        }
+};
 
 #endif

@@ -26,20 +26,22 @@ enum Error
     ERR_PASSALREADY = 1003,
     ERR_NOTREGISTERED = 1004,
 
-    ERR_NEEDMOREPARAMS = 461,
-    ERR_ALREADYREGISTRED = 462,
+    RPL_NOTOPIC = 331,
+    ERR_NOSUCHCHANNEL = 403,
+    ERR_TOOMANYCHANNELS = 405,
     ERR_NONICKNAMEGIVEN = 431,
     ERR_ERRONEUSNICKNAME = 432,
     ERR_NICKNAMEINUSE = 433,
-
+    ERR_NOTONCHANNEL = 442,
+    ERR_NEEDMOREPARAMS = 461,
+    ERR_ALREADYREGISTRED = 462,
+    ERR_CHANNELISFULL = 471,
     ERR_INVITEONLYCHAN = 473,
     ERR_BANNEDFROMCHAN = 474,
     ERR_BADCHANNELKEY = 475,
-    ERR_CHANNELISFULL = 471,
     ERR_BADCHANMASK = 476,
-    ERR_NOSUCHCHANNEL = 403,
-    ERR_TOOMANYCHANNELS = 405,
-    RPL_TOPIC = 332,
+    ERR_CHANOPRIVSNEEDED = 482,
+
 };
 
 class Server {
@@ -87,7 +89,8 @@ class Server {
         
         bool isNickExists(const std::string &, Client *);
         void joinChannel(Client *, const std::string &, const std::string &);
-       
+        bool isClientAuth(Client *client);
+
         void sendError(Client *c, Error err, const std::string &arg);
         void handlePRIVMSG(Client *c, const std::string &target, const std::string &message);
 };
