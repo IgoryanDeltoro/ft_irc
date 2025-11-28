@@ -20,6 +20,10 @@ const bool &Client::getPassStatus() const { return this->_pass_ok; }
 
 void Client::setFD(int fd) { _fd = fd; }
 
+void Client::enqueue_reply(const std::string &msg) { _send_msg.push_back(msg); }
+
+std::deque<std::string> &Client::getMessage() { return this->_send_msg; }
+
 void Client::setPassStatus(bool status) { _pass_ok = status; }
 
 void Client::setNick(const std::string &nick) { _nick = nick; }

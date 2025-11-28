@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 #include <iostream>
+#include <stdlib.h>
 #include <vector>
 #include <map>
 #include <map>
@@ -50,6 +51,7 @@ class Server {
         std::map<int, Client*>      _clients;
         std::map<std::string, Channel *> _channels;
         Parser _parser;
+        std::map<std::string, Client*>  _nicks;
 
         Server();
         Server(const Server &other);
@@ -58,10 +60,11 @@ class Server {
         int create_and_bind();
         void eccept_new_fd();
         void read_message_from(Client *);
+        void send_msg_to(Client *);
         void process_line(Client *, std::string);
         void clean_fd(int);
-        void send_message_to_client(int, std::string); 
         std::string getErrorText(const Error &error);
+        ssize_t send_message_to_client(int, std::string);
 
     public:
         Server(const std::string &port, const std::string &password);
@@ -85,6 +88,7 @@ class Server {
         void joinChannel(Client *, const std::string &, const std::string &);
        
         void sendError(Client *c, Error err, const std::string &arg);
+        void handlePRIVMSG(Client *c, const std::string &target, const std::string &message);
 };
 
 #endif
