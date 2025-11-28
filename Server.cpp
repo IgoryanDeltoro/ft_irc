@@ -253,22 +253,12 @@ void Server::pass(Client *c, const Command &command)
         sendError(c, ERR_PASSALREADY, "");
         return;
     }
-    std::string pass = params[0];
-    std::cout << "pass: " << pass << std::endl;
-    std::cout << "_password: " << _password << std::endl;
-
-    if (pass == _password)
+    if (params[0] == _password)
         c->setPassStatus(true);
     else
     {
         sendError(c, ERR_INCORRECTPASSWORD, "");
         return;
-    }
-
-    if (!c->getNick().empty() && !c->getUserName().empty() && !c->getRealName().empty())
-    {
-        c->setRegStatus(true);
-        send_message_to_client(c->getFD(), "User is REGISTERED\r\n");
     }
 }
 
@@ -285,11 +275,11 @@ bool Server::isNickExists(const std::string &nick, Client *client)
 
 void Server::nick(Client *c, const Command &command)
 {
-    // if (!c->getPassStatus())
-    // {
-    //     sendError(c, ERR_NEEDPASS, "");
-    //     return;
-    // }
+    if (!c->getPassStatus())
+    {
+        sendError(c, ERR_NEEDPASS, "");
+        return;
+    }
 
     std::vector<std::string> params = _parser.splitParams(command.getMode());
     if (params.size() < 1)
@@ -316,39 +306,33 @@ void Server::nick(Client *c, const Command &command)
     if (oldNick.empty())
     {
         std::cout << "User assigned nick: " << newNick << std::endl;
+
+        if (!c->getNick().empty() && !c->getUserName().empty() && !c->getRealName().empty()&&  c->getPassStatus())
+        {
+            c->setRegStatus(true);
+            send_message_to_client(c->getFD(), "User is REGISTERED.\r\n");
+        }
         return;
     }
     else
     {
-        // 7. Broadcast ник сменён:
-        // Пример:
-        // :WiZ NICK Kilroy
         std::string msg = ":" + oldNick + " NICK " + newNick + "\r\n";
         std::cout << msg;
-        // Разошли клиенту, и всем в его каналах:
-        // sendToClient(c, msg);
-        // broadcastToAllUserChannels(c, msg); // если реализовано
     }
 }
 
 void Server::user(Client *c, const Command &command)
 {
-    (void)c;
+    if (!c->getPassStatus())
+    {
+        sendError(c, ERR_NEEDPASS, "");
+        return;
+    }
+
     std::vector<std::string> params = _parser.splitParams(command.getMode());
     std::cout << "USER Command params:" << std::endl;
     for (size_t i = 0; i < params.size(); i++)
         std::cout << i << ": " << params[i] << std::endl;
-    // ERR_NEEDMOREPARAMS 
-
-    // USER guest tolmoon tolsun :Ronnie Reagan ; User registering themselves with a
-    // username of "guest" and real name "Ronnie Reagan".
- 
-
-    if (c->getRegStatus())
-    {
-        sendError(c, ERR_ALREADYREGISTRED, "");
-        return;
-    }
 
     if (params.size() < 3 || command.getText().empty())
     {
@@ -371,6 +355,11 @@ void Server::user(Client *c, const Command &command)
         sendError(c, ERR_NEEDMOREPARAMS, "USER");
         return;
     }
+    if (c->getRegStatus())
+    {
+        sendError(c, ERR_ALREADYREGISTRED, "");
+        return;
+    }
 
     c->setUserName(userName);
     c->setRealName(realName);
@@ -378,14 +367,12 @@ void Server::user(Client *c, const Command &command)
     if (!c->getNick().empty() && !c->getUserName().empty() && !c->getRealName().empty()&&  c->getPassStatus())
     {
         c->setRegStatus(true);
-        send_message_to_client(c->getFD(), "User is REGISTERED\r\n");
+        send_message_to_client(c->getFD(), "User is REGISTERED.\r\n");
     }
 }
 
 void Server::join(Client *c, const Command &command)
 {
-    std::cout << "JOIN()" << std::endl;
-
     if (!c->getPassStatus())
     {
         sendError(c, ERR_NEEDPASS, "");
@@ -492,6 +479,7 @@ void Server::join(Client *c, const Command &command)
     //  JOIN message from WiZ
 }
 
+
 void Server::joinChannel(Client *c, const std::string &name, const std::string &password)
 {
     //проверить имя на валидность!
@@ -500,16 +488,19 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
 
     if (_channels.count(name) == 0)
     {
+        send_message_to_client(c->getFD(), ": Channel " + name + " not found \r\n");
+
         ch = new Channel(name, c);
         _channels[name] = ch;
         ch->addUser(c);
         ch->addOperator(c->getFD());
-
+        send_message_to_client(c->getFD(), ": Channel " + name + " added with new user as operator\r\n");
         return;
     }
     else
     {
         ch = _channels[name];
+        send_message_to_client(c->getFD(), ": Channel " + name + " found \r\n");
 
         // +i (invite only)
         if (ch->isI() && ch->getInvited().count(c->getFD()) == 0)
@@ -535,6 +526,7 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
         // пользователь есть в канале? - пропустить
 
         ch->addUser(c);
+        send_message_to_client(c->getFD(), ": Channel " + name + " USER ADDED\r\n");
     }
 }
 
@@ -649,8 +641,50 @@ void Server::help(Client *c)
 
 void Server::topic(Client *c, const Command &command)
 {
-    (void)c;
-    (void)command;
+    if (!c->getPassStatus())
+    {
+        sendError(c, ERR_NEEDPASS, "");
+        return;
+    }
+    if (!c->getRegStatus())
+    {
+        sendError(c, ERR_NOTREGISTERED, "");
+        return;
+    }
+    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::cout << "TOPIC Command params:" << std::endl;
+    for (size_t i = 0; i < params.size(); i++)
+        std::cout << i << ": " << params[i] << std::endl;
+
+    if (params.size() != 1)
+    {
+        sendError(c, ERR_NEEDMOREPARAMS, "TOPIC");
+        return;
+    }
+    std::string chanelName = params[0];
+    //check chanelName
+
+    Channel *ch;
+    if (_channels.count(chanelName) == 0)
+    {
+        // sendError(c, ERR_NEEDMOREPARAMS, "TOPIC");
+        send_message_to_client(c->getFD(), ":CHANEL NOT FOUND\r\n");
+        return;
+    }
+    else
+        ch = _channels[chanelName];
+
+    if (command.getText().empty())
+    {
+        std::string topicToSend = ch->getTopic().empty() ? "Topic not set" : ch->getTopic();
+        send_message_to_client(c->getFD(), ":" + topicToSend + "\r\n");
+        return;
+    }
+    else
+    {
+        //check user operator and chanel can change topic
+        //change channel topic
+    }
 }
 
 void Server::cap(Client *c, const Command &command)
@@ -750,7 +784,7 @@ void Server::process_line(Client *c, std::string line)
     Command cmnd = _parser.parse(*c, line);
 
     if (cmnd.getCommand() == NOT_FOUND)
-        send_message_to_client(c->getFD(), "Command not found <" + line + ">\r\n");
+        send_message_to_client(c->getFD(), ":Command not found <" + line + ">\r\n");
     else if (cmnd.getCommand() == HELP)
         help(c);
     else if (cmnd.getCommand() == PASS)

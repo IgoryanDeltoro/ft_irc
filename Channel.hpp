@@ -97,7 +97,11 @@ class Channel {
         const std::string &getPassword() const
         {
             return _password;
-            ;
+        }
+
+        const std::string &getTopic() const
+        {
+            return _topic;
         }
 
         // getters
