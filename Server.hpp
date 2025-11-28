@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 #include <iostream>
+#include <stdlib.h>
 #include <vector>
 #include <map>
 #include "Client.hpp"
@@ -12,11 +13,12 @@ class Client;
 
 class Server {
     private:
-        int                         _listen_fd;
-        std::string                 _port;
-        std::string                 _password;
-        std::vector<struct pollfd>  _pfds;
-        std::map<int, Client*>      _clients;
+        int                             _listen_fd;
+        std::string                     _port;
+        std::string                     _password;
+        std::vector<struct pollfd>      _pfds;
+        std::map<int, Client*>          _clients;
+        std::map<std::string, Client*>  _nicks;
 
         Server();
         Server(const Server &other);
@@ -25,15 +27,19 @@ class Server {
         int create_and_bind();
         void eccept_new_fd();
         void read_message_from(Client *);
+        void send_msg_to(Client *);
         void process_line(Client *, std::string);
         void clean_fd(int);
-        void send_message_to_client(int, std::string); 
+        ssize_t send_message_to_client(int, std::string);
 
     public:
         Server(const std::string &port, const std::string &password);
         ~Server();
 
         void run();
+
+        void handlePRIVMSG(Client *c, const std::string &target, const std::string &message);
+
 
 };
 

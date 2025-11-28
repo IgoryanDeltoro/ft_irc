@@ -17,3 +17,9 @@ bool Client::getRegStatus() const { return this->_is_registred; }
 bool Client::getPassStatus() const { return this->_pass_ok; }
 
 void Client::setFD(int fd) { _fd = fd; }
+
+void Client::setNick(std::string nick) { _nick = nick; }
+
+void Client::enqueue_reply(const std::string &msg) { _send_msg.push_back(msg); }
+
+std::deque<std::string> &Client::getMessage() { return this->_send_msg; }
