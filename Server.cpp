@@ -771,6 +771,8 @@ void Server::process_line(Client *c, std::string line)
         invite(c, cmnd);
     else if (cmnd.getCommand() == CAP)
         cap(c, cmnd);
+    else if (cmnd.getCommand() == PRIVMSG)
+        privmsg(c, cmnd);
 }
 
 void Server::handlePRIVMSG(Client *c, const std::string &target, const std::string &message)
@@ -787,4 +789,10 @@ void Server::handlePRIVMSG(Client *c, const std::string &target, const std::stri
             break;
         }
     }
+}
+
+void Server::privmsg(Client *c, const Command &cmd)
+{
+    (void)c;
+    (void)cmd;
 }

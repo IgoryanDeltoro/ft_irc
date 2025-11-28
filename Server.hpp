@@ -82,6 +82,7 @@ class Server {
         void topic(Client *, const Command &);
         void invite(Client *, const Command &);
         void cap(Client *, const Command &);
+        void privmsg(Client *, const Command &);
 
         
         bool isNickExists(const std::string &, Client *);
