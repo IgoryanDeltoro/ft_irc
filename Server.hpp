@@ -6,6 +6,7 @@
 #include "Parser.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
+#include "Command.hpp"
 
 #define BECKLOG 10
 #define BUFFER 4096
@@ -13,6 +14,31 @@
 class Parser;
 class Client;
 class Channel;
+class Command;
+
+enum Error
+{
+    // pass
+    ERR_INCORRECTPASSWORD = 1001,
+    ERR_NEEDPASS = 1002,
+    ERR_PASSALREADY = 1003,
+    ERR_NOTREGISTERED = 1004,
+
+    ERR_NEEDMOREPARAMS = 461,
+    ERR_ALREADYREGISTRED = 462,
+    ERR_NONICKNAMEGIVEN = 431,
+    ERR_ERRONEUSNICKNAME = 432,
+    ERR_NICKNAMEINUSE = 433,
+
+    ERR_INVITEONLYCHAN = 473,
+    ERR_BANNEDFROMCHAN = 474,
+    ERR_BADCHANNELKEY = 475,
+    ERR_CHANNELISFULL = 471,
+    ERR_BADCHANMASK = 476,
+    ERR_NOSUCHCHANNEL = 403,
+    ERR_TOOMANYCHANNELS = 405,
+    RPL_TOPIC = 332,
+};
 
 class Server {
     private:
@@ -21,8 +47,8 @@ class Server {
         std::string                 _password;
         std::vector<struct pollfd>  _pfds;
         std::map<int, Client*>      _clients;
-        std::map<int, Channel*>      _channels;
-        Parser parser;
+        std::map<std::string, Channel *> _channels;
+        Parser _parser;
 
         Server();
         Server(const Server &other);
@@ -34,6 +60,7 @@ class Server {
         void process_line(Client *, std::string);
         void clean_fd(int);
         void send_message_to_client(int, std::string); 
+        std::string getErrorText(const Error &error);
 
     public:
         Server(const std::string &port, const std::string &password);
@@ -41,6 +68,22 @@ class Server {
 
         void run();
 
+        void help(Client *);
+        void pass(Client *, const Command &);
+        void nick(Client *, const Command &);
+        void user(Client *, const Command &);
+        void join(Client *, const Command &);
+        void mode(Client *, const Command &);
+        void kick(Client *, const Command &);
+        void topic(Client *, const Command &);
+        void invite(Client *, const Command &);
+        void cap(Client *, const Command &);
+
+        
+        bool isNickExists(const std::string &, Client *);
+        void joinChannel(Client *, const std::string &, const std::string &);
+       
+        void sendError(Client *c, Error err, const std::string &arg);
 };
 
 #endif

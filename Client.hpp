@@ -6,27 +6,34 @@ class Client {
     private:
         int             _fd;
         std::string     _nick;
-        std::string     _user;
+        std::string     _userName;
+        std::string     _realName;
         std::string     _recv_buff;
         bool            _is_registred;
         bool            _pass_ok;
     
     public:
         Client(int fd);
+        bool operator!=(const Client &c) const;
         ~Client();
 
         // getters
         int         getFD() const;
-        std::string getNick() const;
-        std::string getUser() const;
+        const std::string &getNick() const;
+        const std::string &getUserName() const;
+        const std::string &getRealName() const;
+
         std::string &getRecvBuff();
-        bool        getRegStatus() const;
-        bool        getPassStatus() const;
+        const bool &getRegStatus() const;
+        const bool &getPassStatus() const;
 
         // setters
         void setFD(int fd);
-        void setRegStatus();
-        void setPassStatus();
+        void setRegStatus(bool);
+        void setPassStatus(bool);
+        void setNick(const std::string &nick);
+        void setUserName(const std::string &user);
+        void setRealName(const std::string &user);
 };
 
 #endif
