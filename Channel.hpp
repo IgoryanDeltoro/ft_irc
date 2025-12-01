@@ -22,7 +22,7 @@ class Channel {
         bool _l;
 
         std::set<std::string> _operators;
-        std::map<std::string, Client*>  _users;
+        std::set<std::string> _users;
         std::set<std::string> _invited;
 
     public:
@@ -53,7 +53,7 @@ class Channel {
 
         void addUser(Client *c)
         {
-            _users[c->getNick()] = c;
+            _users.insert(c->getNick());
         }
 
         void removeUser(Client *c)
@@ -83,7 +83,7 @@ class Channel {
             return _operators;
         }
 
-        std::map<std::string, Client *> &getUsers()
+        std::set<std::string> &getUsers()
         {
             return _users;
         }

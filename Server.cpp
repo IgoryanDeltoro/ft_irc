@@ -512,7 +512,7 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
             return;
         }
 
-        const std::map<std::string, Client *> &users = ch->getUsers(); // предполагаем getUsers() const -> const&
+        const std::set<std::string> &users = ch->getUsers(); // предполагаем getUsers() const -> const&
         std::string nick = c->getNick();
         if (users.find(nick) != users.end())
         {
@@ -773,20 +773,20 @@ void Server::kick(Client *c, const Command &command)
         }
 
         // fds to send users ( + deletet user)
-        std::vector<int> fds;
-        std::map<std::string, Client *> &chUsers = ch->getUsers();
-        for (std::map<std::string, Client *>::iterator it = chUsers.begin(); it != chUsers.end(); it++)
-        {
-            fds.push_back(it->second->getFD());
-        }
+        // std::vector<int> fds;
+        // std::set<std::string> &chUsers = ch->getUsers();
+        // for (std::map<std::string, Client *>::iterator it = chUsers.begin(); it != chUsers.end(); it++)
+        // {
+        //     fds.push_back(it->second->getFD());
+        // }
         //удаляем
-        kickClientFromChannel(*ch, userToKick);
+        // kickClientFromChannel(*ch, userToKick);
         // сообщаем всем fds
-        std::string outMessage = ":" + c->getNick() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
-        for (size_t d = 0; d < fds.size(); i++)
-        {
-            send_message_to_client(c->getFD(), outMessage);
-        }
+        // std::string outMessage = ":" + c->getNick() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
+        // for (size_t d = 0; d < fds.size(); i++)
+        // {
+        //     send_message_to_client(c->getFD(), outMessage);
+        // }
     }
 
     //         Examples :
@@ -797,7 +797,7 @@ void Server::kick(Client *c, const Command &command)
 void Server::kickClientFromChannel(Channel &channel, Client *client)
 {
     const std::string kickedNick = client->getNick();
-    std::map<std::string, Client *> &users = channel.getUsers();
+    std::set<std::string> &users = channel.getUsers();
     std::set<std::string> &operators = channel.getOperators();
     std::set<std::string> &invited = channel.getInvited();
 
@@ -1008,7 +1008,7 @@ void Server::process_line(Client *c, std::string line)
     if (line.empty())
     {
         return;
-        Command(NOT_FOUND, "", ""); //???
+        Command("", NOT_FOUND, "", ""); //???
     }
 
     Command cmnd = _parser.parse(*c, line);
