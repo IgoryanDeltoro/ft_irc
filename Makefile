@@ -2,7 +2,7 @@ NAME = ircserv
 
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD #-pedantic
-SRC = main.cpp Server.cpp Client.cpp Parser.cpp Command.cpp
+SRC = main.cpp Server.cpp Client.cpp Parser.cpp Command.cpp Channel.cpp
 BUILD = ./build
 
 OBJ = $(SRC:%.cpp=$(BUILD)/%.o)

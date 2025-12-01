@@ -6,8 +6,30 @@
 
 enum Commands
 {
-    NOT_FOUND, HELP, PASS, NICK, USER, JOIN, INVITE, KICK, TOPIC, MODE,
-    PRIVMSG, QUIT, LIST, CAP, PING,
+    NOT_FOUND,
+    HELP,
+    PASS,
+    NICK,
+    USER,
+    JOIN,
+    INVITE,
+    KICK,
+    TOPIC,
+    MODE,
+    PRIVMSG,
+    QUIT,
+    LIST,
+    CAP,
+    PING,
+    // PART
+    //    NOTICE
+};
+
+struct ModeChange
+{
+    bool adding; // true = +, false = -
+    char flag;
+    std::string arg; // e.g. key in +k
 };
 
 class Command

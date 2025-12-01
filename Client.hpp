@@ -13,7 +13,7 @@ class Client {
         std::string     _realName;
         std::string             _recv_buff;
         std::deque<std::string> _send_msg;
-    
+        Client();
     public:
         Client(int fd);
         bool operator!=(const Client &c) const;
