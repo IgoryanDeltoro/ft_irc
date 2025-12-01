@@ -32,6 +32,7 @@ enum Error
     ERR_NONICKNAMEGIVEN = 431,
     ERR_ERRONEUSNICKNAME = 432,
     ERR_NICKNAMEINUSE = 433,
+    ERR_USERNOTINCHANNEL = 441,
     ERR_NOTONCHANNEL = 442,
     ERR_NEEDMOREPARAMS = 461,
     ERR_ALREADYREGISTRED = 462,
@@ -85,14 +86,17 @@ class Server {
         void invite(Client *, const Command &);
         void cap(Client *, const Command &);
         void privmsg(Client *, const Command &);
+        void ping(Client *, const Command &);
 
-        
         bool isNickExists(const std::string &, Client *);
         void joinChannel(Client *, const std::string &, const std::string &);
-        bool isClientAuth(Client *client);
+        bool isClientAuth(Client *);
+
+        void kickClientFromChannel(Channel &, Client *);
 
         void sendError(Client *c, Error err, const std::string &arg);
         void handlePRIVMSG(Client *c, const std::string &target, const std::string &message);
+        void sendWelcome(Client *c);
 };
 
 #endif

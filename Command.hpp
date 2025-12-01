@@ -18,7 +18,8 @@ enum Commands
     PRIVMSG,
     QUIT,
     LIST,
-    CAP//??,
+    CAP, //??,
+    PING,
 };
 
 class Command

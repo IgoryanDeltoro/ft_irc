@@ -73,17 +73,17 @@ class Channel {
             _invited.insert(nick);
         }
 
-        const std::set<std::string> &getInvited() const
+        std::set<std::string> &getInvited()
         {
             return _invited;
         }
 
-        const std::set<std::string> &getOperators() const
+        std::set<std::string> &getOperators()
         {
             return _operators;
         }
 
-        const std::map<std::string, Client *> &getUsers() const
+        std::map<std::string, Client *> &getUsers()
         {
             return _users;
         }
