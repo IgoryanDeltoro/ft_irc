@@ -141,8 +141,8 @@ void Server::eccept_new_fd() {
         _pfds.push_back(pa);
 
         std::cout << "Accepted fd=" << new_fd << std::endl; 
-        _clients[new_fd]->enqueue_reply("Welcome to IRC chat.\r\n");
-        set_event_for_sending_msg(_clients[new_fd]->getFD());
+        // _clients[new_fd]->enqueue_reply("Welcome to IRC chat.\r\n");
+        // set_event_for_sending_msg(_clients[new_fd]->getFD());
     }
 }
 
@@ -244,7 +244,7 @@ void Server::clean_fd(int fd) {
 
 void Server::pass(Client *c, const Command &command)
 {
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
 
     if (params.size() != 1)
     {
@@ -291,7 +291,7 @@ void Server::nick(Client *c, const Command &command)
         return;
     }
 
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
     if (params.size() < 1)
     {
         sendError(c, ERR_NONICKNAMEGIVEN, "");
@@ -348,8 +348,8 @@ void Server::user(Client *c, const Command &command)
         sendError(c, ERR_NEEDPASS, "");
         return;
     }
+    std::vector<std::string> params = command.getParams();
 
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
     std::cout << "USER Command params:" << std::endl;
     for (size_t i = 0; i < params.size(); i++)
         std::cout << i << ": " << params[i] << std::endl;
@@ -398,7 +398,7 @@ void Server::join(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
     std::cout << "JOIN Command params:" << std::endl;
     for (size_t i = 0; i < params.size(); i++)
         std::cout << i << ": " << params[i] << std::endl;
@@ -624,7 +624,7 @@ void Server::invite(Client *c, const Command &command)
         //         ERR_CHANOPRIVSNEEDED
         //         RPL_INVITING RPL_AWAY
 
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
     std::cout << "JOIN Command params:" << std::endl;
     for (size_t i = 0; i < params.size(); i++)
         std::cout << i << ": " << params[i] << std::endl;
@@ -714,7 +714,7 @@ void Server::kick(Client *c, const Command &command)
     // <channel> <user> [<comment>]
     // <channel>{, <channel>} < user>{, <user>}[<comment>]
 
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
     std::cout << "JOIN Command params:" << std::endl;
     for (size_t i = 0; i < params.size(); i++)
         std::cout << i << ": " << params[i] << std::endl;
@@ -860,8 +860,9 @@ void Server::topic(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
-    std::cout << "TOPIC Command params:" << std::endl;
+    std::vector<std::string> params = command.getParams();
+
+std::cout << "TOPIC Command params:" << std::endl;
     for (size_t i = 0; i < params.size(); i++)
         std::cout << i << ": " << params[i] << std::endl;
 
@@ -929,7 +930,7 @@ void Server::topic(Client *c, const Command &command)
 
 void Server::cap(Client *c, const Command &command)
 {
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
     if (params.size() == 0) return;
     if (params[0] == "LS") 
     {
@@ -942,12 +943,25 @@ void Server::cap(Client *c, const Command &command)
 
 void Server::ping(Client *c, const Command &command)
 {
-    std::string arg = command.getMode();
+    std::string arg;
 
+    // use trailing if present (PING :hello)
+    if (!command.getText().empty())
+        arg = command.getText();
+
+    // otherwise use first parameter (PING hello)
+    else if (!command.getParams().empty())
+        arg = command.getParams()[0];
+
+    // No argument → silently ignore (RFC)
     if (arg.empty())
-        return; // по RFC можно игнорировать
+        return;
 
-    send_message_to_client(c->getFD(), "PONG :" + arg + "\r\n");
+    // Send back PONG
+    c->enqueue_reply("PONG :" + arg + "\r\n");
+    set_event_for_sending_msg(c->getFD());
+
+
 }
 
 void Server::sendError(Client *c, Error err, const std::string &arg)
@@ -1052,40 +1066,27 @@ void Server::process_line(Client *c, std::string line)
     if (line.empty())
     {
         return;
-        Command("", NOT_FOUND, "", ""); //???
+        // Command("", NOT_FOUND, "", ""); //???
     }
 
-    Command cmnd = _parser.parse(*c, line);
+    Command cmnd = _parser.parse(line);
 
     if (cmnd.getCommand() == NOT_FOUND) {
         c->enqueue_reply("Command not found <" + line + ">\r\n");
         set_event_for_sending_msg(c->getFD());
     }
-
-    else if (cmnd.getCommand() == HELP)
-        help(c);
-    else if (cmnd.getCommand() == PASS)
-        pass(c, cmnd);
-    else if (cmnd.getCommand() == NICK)
-        nick(c, cmnd);
-    else if (cmnd.getCommand() == USER)
-        user(c, cmnd);
-    else if (cmnd.getCommand() == JOIN)
-        join(c, cmnd);
-    else if (cmnd.getCommand() == MODE)
-        mode(c, cmnd);
-    else if (cmnd.getCommand() == KICK)
-        kick(c, cmnd);
-    else if (cmnd.getCommand() == TOPIC)
-        topic(c, cmnd);
-    else if (cmnd.getCommand() == INVITE)
-        invite(c, cmnd);
-    else if (cmnd.getCommand() == CAP)
-        cap(c, cmnd);
-    else if (cmnd.getCommand() == PRIVMSG)
-        privmsg(c, cmnd);
-    else if (cmnd.getCommand() == PING)
-        ping(c, cmnd);
+    else if (cmnd.getCommand() == HELP) help(c);
+    else if (cmnd.getCommand() == PASS) pass(c, cmnd);
+    else if (cmnd.getCommand() == NICK) nick(c, cmnd);
+    else if (cmnd.getCommand() == USER) user(c, cmnd);
+    else if (cmnd.getCommand() == JOIN) join(c, cmnd);
+    else if (cmnd.getCommand() == MODE) mode(c, cmnd);
+    else if (cmnd.getCommand() == KICK) kick(c, cmnd);
+    else if (cmnd.getCommand() == TOPIC) topic(c, cmnd);
+    else if (cmnd.getCommand() == INVITE) invite(c, cmnd);
+    else if (cmnd.getCommand() == CAP) cap(c, cmnd);
+    else if (cmnd.getCommand() == PRIVMSG) privmsg(c, cmnd);
+    else if (cmnd.getCommand() == PING) ping(c, cmnd);
 }
 
 void Server::set_event_for_sending_msg(int fd) {
@@ -1105,37 +1106,36 @@ void Server::sendWelcome(Client *c)
     c->enqueue_reply(":server 001 " + nick + " :Welcome to server!!!!!!\r\n");
     c->enqueue_reply(":server 002 " + nick + " :Your host is server\r\n");
     c->enqueue_reply(":server 003 " + nick + " :This server was created today\r\n");
-
     c->enqueue_reply(":server 375 " + nick + " :server Message\r\n");
-
     c->enqueue_reply(":server 372 " + nick + " :Welcome!\r\n");
-
     c->enqueue_reply(":server 376 " + nick + " :END!\r\n");
 
     set_event_for_sending_msg(c->getFD());
 }
 
 void Server::privmsg(Client *c, const Command &cmd) {
-    if (cmd.getText().empty()) {sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG"); return; };
-    if (cmd.getMode().empty()) {sendError(c, ERR_NORECIPIENT, "PRIVMSG"); return; };
+    (void)c;
+    (void)cmd;
+    //     if (cmd.getParams().empty()) {sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG"); return; };
+//     if (cmd.getParams().empty()) {sendError(c, ERR_NORECIPIENT, "PRIVMSG"); return; };
 
-    std::string R = RESET;
-    std::stringstream ss(cmd.getMode());
-    std::string target;
-    while (std::getline(ss, target,',')) {
-        if (target[0] == '#') {
-            // send message to target in group
-            std::map<std::string, Channel*>::iterator it = _channels.find(target);
-            if (it == _channels.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
-            std::string sender = (c->getNick().empty() ? "*" : c->getNick());
-            it->second->broadcast(c, ":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
-        } else {
-            // send message to target
-            std::map<std::string, Client*>::iterator it = _nicks.find(target);
-            if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
-            std::string sender = (c->getNick().empty() ? "*" : c->getNick());
-            it->second->enqueue_reply(":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
-            set_event_for_sending_msg(it->second->getFD());
-        }
-    }
+//     std::string R = RESET;
+//     std::stringstream ss(cmd.getParams());
+//     std::string target;
+//     while (std::getline(ss, target,',')) {
+//         if (target[0] == '#') {
+//             // send message to target in group
+//             std::map<std::string, Channel*>::iterator it = _channels.find(target);
+//             if (it == _channels.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
+//             std::string sender = (c->getNick().empty() ? "*" : c->getNick());
+//             it->second->broadcast(c, ":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
+//         } else {
+//             // send message to target
+//             std::map<std::string, Client*>::iterator it = _nicks.find(target);
+//             if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
+//             std::string sender = (c->getNick().empty() ? "*" : c->getNick());
+//             it->second->enqueue_reply(":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
+//             set_event_for_sending_msg(it->second->getFD());
+//         }
+//     }
 }

@@ -19,7 +19,7 @@ class Parser {
         Parser();
         ~Parser();
 
-        Command parse(Client &, std::string &) const;
+        Command parse(std::string &) const;
 
         void trim(std::string &) const;
         std::vector<std::string> splitParams(const std::string &) const;

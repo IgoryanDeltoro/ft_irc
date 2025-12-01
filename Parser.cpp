@@ -3,97 +3,66 @@
 Parser::Parser() {}
 Parser::~Parser() {}
 
-// <message> ::= [':' <prefix> <SPACE> ] <command> <params> <crlf>
-// <params>  ::= <SPACE> [ ':' <trailing> | <middle> <params> ]
-
-Command Parser::parse(Client &c, std::string &line) const
+Command Parser::parse(std::string &line) const
 {
-    (void)c;
-    
 
+    Command cmd;
     std::stringstream ss(line);
-    std::string cmdStr;
-    ss >> cmdStr;
+    std::string token;
 
-    std::cout << "PARSE cmdStr: " << cmdStr << std::endl;
-    Command command;
-    if (cmdStr == "HELP")
-        command.setCommand(HELP);
-    else if (cmdStr == "PASS")
-        command.setCommand(PASS);
-    else if (cmdStr == "NICK")
-        command.setCommand(NICK);
-    else if (cmdStr == "USER")
-        command.setCommand(USER);
-    else if (cmdStr == "JOIN")
-        command.setCommand(JOIN);
-    else if (cmdStr == "MODE")
-        command.setCommand(MODE);
-    else if (cmdStr == "KICK")
-        command.setCommand(KICK);
-    else if (cmdStr == "TOPIC")
-        command.setCommand(TOPIC);
-    else if (cmdStr == "INVITE")
-        command.setCommand(INVITE);
-    else if (cmdStr == "PRIVMSG")
-        command.setCommand(PRIVMSG);
-    else if (cmdStr == "LIST")
-        command.setCommand(LIST);
-    else if (cmdStr == "QUIT")
-        command.setCommand(QUIT);
-    else if (cmdStr == "CAP")
-        command.setCommand(CAP);
-    else if (cmdStr == "PING")
-        command.setCommand(PING);
-    else
-        command.setCommand(NOT_FOUND);
-    
-    size_t pos = line.find(" :");
-    if (pos != std::string::npos)
+    // ---------- 1. Parse prefix ----------
+    if (line[0] == ':')
     {
-        std::cout << "PARSE found :" << std::endl;
-
-        std::string mode = line.substr(cmdStr.size(), pos - cmdStr.size());
-        trim(mode);
-        command.setMode(mode);
-
-        std::string text = line.substr(pos + 2);
-        command.setText(text);
-
-        std::cout << "PARSE mode: " << mode << std::endl;
-        std::cout << "PARSE text: " << text << std::endl;
+        ss >> token;                   // token = ":prefix"
+        cmd.setPrefix(token.substr(1)); // remove ':'
     }
-    else
+
+    // ---------- 2. Parse command ----------
+    ss >> token;
+    std::string cmdStr = token;
+
+    for (size_t i = 0; i < cmdStr.size(); i++)
     {
-        std::cout << "PARSE NOT found :" << std::endl;
-
-        std::string mode = line.substr(cmdStr.size());
-        trim(mode);
-        command.setMode(mode);
-        std::cout << "PARSE mode: " << mode << std::endl;
+        cmdStr[i] = std::toupper(cmdStr[i]);
     }
-    return command;
+
+    if (cmdStr == "HELP") cmd.setCommand(HELP);
+    else if (cmdStr == "PASS") cmd.setCommand(PASS);
+    else if (cmdStr == "NICK") cmd.setCommand(NICK);
+    else if (cmdStr == "USER") cmd.setCommand(USER);
+    else if (cmdStr == "JOIN") cmd.setCommand(JOIN);
+    else if (cmdStr == "MODE") cmd.setCommand(MODE);
+    else if (cmdStr == "KICK") cmd.setCommand(KICK);
+    else if (cmdStr == "TOPIC") cmd.setCommand(TOPIC);
+    else if (cmdStr == "INVITE") cmd.setCommand(INVITE);
+    else if (cmdStr == "PRIVMSG") cmd.setCommand(PRIVMSG);
+    else if (cmdStr == "LIST") cmd.setCommand(LIST);
+    else if (cmdStr == "QUIT") cmd.setCommand(QUIT);
+    else if (cmdStr == "CAP") cmd.setCommand(CAP);
+    else if (cmdStr == "PING") cmd.setCommand(PING);
+    else cmd.setCommand(NOT_FOUND);
+
+    // ---------- 3. Parse parameters ----------
+    while (ss >> token)
+    {
+        if (token[0] == ':')
+        {
+            // It's trailing — grab rest of stream
+            std::string trailing = token.substr(1);
+            std::string rest;
+            std::getline(ss, rest);
+            trailing += rest;
+            cmd.setText(trailing);
+            break;
+        }
+        else
+        {
+            cmd.addParam(token);
+        }
+    }
+
+    return cmd;
 }
-
-// void parse_line(std::string &line)
-// {
-
-// }
-
-// PASS passworf
-// NICK nick
-// USER _user
-// HELP help
-
-
-// JOIN #ch_name
-// INVITE
-// KICK
-// MODE -it #ch_name
-
-
-// MSG username message kjhghskjs ksdhf ksjh kj h
-// Q username message kjhghskjs ksdhf ksjh kj h
 
 void Parser::trim(std::string &s) const {
     size_t start = s.find_first_not_of(" \t\n\r");
