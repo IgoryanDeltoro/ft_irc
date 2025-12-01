@@ -100,6 +100,13 @@ class Channel {
             ;
         }
 
+        void broadcast(Client *from, const std::string &msg) {
+            std::map<int, Client*>::iterator it = _users.begin();
+            for (; it != _users.end(); ++it) {
+                if (from && from->getFD() != it->second->getFD())
+                    it->second->enqueue_reply(msg);
+            }
+        }
         // getters
         //         int         getFD() const;
         //         std::string getNick() const;
