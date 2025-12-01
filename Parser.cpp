@@ -3,6 +3,9 @@
 Parser::Parser() {}
 Parser::~Parser() {}
 
+// <message> ::= [':' <prefix> <SPACE> ] <command> <params> <crlf>
+// <params>  ::= <SPACE> [ ':' <trailing> | <middle> <params> ]
+
 Command Parser::parse(Client &c, std::string &line) const
 {
     (void)c;
@@ -40,6 +43,8 @@ Command Parser::parse(Client &c, std::string &line) const
         command.setCommand(QUIT);
     else if (cmdStr == "CAP")
         command.setCommand(CAP);
+    else if (cmdStr == "PING")
+        command.setCommand(PING);
     else
         command.setCommand(NOT_FOUND);
     

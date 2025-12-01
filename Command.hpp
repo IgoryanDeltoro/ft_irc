@@ -18,20 +18,23 @@ enum Commands
     PRIVMSG,
     QUIT,
     LIST,
-    CAP//??,
+    CAP, //??,
+    PING,
 };
 
 class Command
 {
 private:
+    std::string _prefix;
     Commands _command;
     std::string _mode;
     std::string _text;
 
 public:
-    Command() : _command(NOT_FOUND), _mode(""), _text("") {};
-    Command(const Commands &command, const std::string &mode, const std::string &text)
+    Command(): _prefix(""), _command(NOT_FOUND), _mode(""), _text("") {};
+    Command(const std::string &prefix, const Commands &command, const std::string &mode, const std::string &text)
     {
+        _prefix = prefix;
         _command = command;
         _mode = mode;
         _text = text;
