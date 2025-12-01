@@ -10,6 +10,15 @@
 #include "Channel.hpp"
 #include "Command.hpp"
 
+# define RED "\e[31m"
+# define GREEN "\e[32m"
+# define YELLOW "\e[33m"
+# define BLUE "\e[34m"
+# define MAGENTA "\e[35m"
+# define CYAN "\e[36m"
+# define WHITE "\e[37m"
+# define RESET "\e[0m"
+
 #define BECKLOG 10
 #define BUFFER 4096
 
@@ -43,6 +52,18 @@ enum Error
     ERR_BADCHANMASK = 476,
     ERR_CHANOPRIVSNEEDED = 482,
 
+
+    // IRC numeric error replies
+    ERR_NORECIPIENT = 411,
+    ERR_NOTEXTTOSEND = 412,
+    ERR_CANNOTSENDTOCHAN = 404,
+    ERR_NOTOPLEVEL = 413,
+    ERR_WILDTOPLEVEL = 414,
+    ERR_TOOMANYTARGETS = 407,
+    ERR_NOSUCHNICK = 401,
+
+    // IRC numeric reply
+    RPL_AWAY = 301,
 };
 
 class Server {
@@ -68,6 +89,7 @@ class Server {
         void clean_fd(int);
         std::string getErrorText(const Error &error);
         ssize_t send_message_to_client(int, std::string);
+        void set_event_for_sending_msg(int fd);
 
     public:
         Server(const std::string &port, const std::string &password);
@@ -95,8 +117,9 @@ class Server {
         void kickClientFromChannel(Channel &, Client *);
 
         void sendError(Client *c, Error err, const std::string &arg);
-        void handlePRIVMSG(Client *c, const std::string &target, const std::string &message);
+
         void sendWelcome(Client *c);
+
 };
 
 #endif

@@ -104,6 +104,19 @@ class Channel {
             return _topic;
         }
 
+        void broadcast(Client *from, const std::string &msg) {
+            (void)from;
+            (void)msg;
+
+            // std::set<std::string>::iterator it = _users.begin();
+
+
+            // for (; it != _users.end(); ++it) {
+            //     if (from && from->getFD() != it->second->getFD())
+            //         it->second->enqueue_reply(msg);
+            // }
+        }
+
         void setTopic(const std::string &topic)
         {
             _topic = topic;
