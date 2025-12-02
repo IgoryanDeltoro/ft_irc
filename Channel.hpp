@@ -54,6 +54,7 @@ class Channel {
 
         const std::string &getPassword() const;
         const std::string &getTopic() const;
+        const std::string &getName() const;
 
         void broadcast(Client *from, const std::string &msg);
 

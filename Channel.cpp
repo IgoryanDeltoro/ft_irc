@@ -34,6 +34,7 @@ std::set<std::string> &Channel::getInvited() { return _invited; }
 const int &Channel::getUserLimit() const { return _userLimit; }
 const std::string &Channel::getPassword() const { return _password; }
 const std::string &Channel::getTopic() const { return _topic; }
+const std::string &Channel::getName() const { return _name; }
 
 void Channel::setTopic(const std::string &topic) { _topic = topic; }
 void Channel::setPassword(const std::string &password) { _password = password; }

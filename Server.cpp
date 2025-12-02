@@ -330,7 +330,8 @@ void Server::nick(Client *c, const Command &command)
     {
         std::string msg = ":" + oldNick + " NICK " + newNick + "\r\n";
         std::cout << msg;
-
+        c->setRegStatus(true);
+        sendWelcome(c);
 
         // Разошли клиенту, и всем в его каналах:
         // c->enqueue_reply(msg);
@@ -562,7 +563,7 @@ void Server::mode(Client *c, const Command &command)
     bool adding = true;
     size_t argIndex = 0;
 
-    for (size_t i = 0; i < modeStr.size(); ++i)
+    for (size_t i = 0; i < modeStr.size(); i++)
     {
         char f = modeStr[i];
         if (f == '+')
@@ -674,11 +675,9 @@ void Server::invite(Client *c, const Command &command)
         sendError(c, ERR_NEEDMOREPARAMS, "INVITE");
         return;
     }
-    // <nickname> <channel>
     std::string nick = params[0];
     std::string channel = params[1];
 
-    // check nick channel
     if (!_parser.isValidNick(nick))
     {
         sendError(c, ERR_NOSUCHNICK, nick);
@@ -704,7 +703,6 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
 
-    // +i (invite only)
     if (ch->isI() && !ch->isOperator(c->getNick())) {
         sendError(c, ERR_CHANOPRIVSNEEDED, channel);
         return;
@@ -724,21 +722,11 @@ void Server::invite(Client *c, const Command &command)
     }
 
     // :<inviter> INVITE <nickname> :<channel>
+    std::stringstream msg;
+    msg << ":" << c->getNick() << " INVITE " << invitee->getNick() << " :" << ch->getName();
 
-    // std::stringstream msg;
-    // msg << ":" << c->getNick() << " INVITE " << invitee->getNick() << " :" << ch->getName();
-    // sendMessage(invitee, msg.str());
-
-    // // подтверждение для пригласившего
-    // sendReply(c, RPL_INVITING, invitee->getNick(), ch->getName());
-    // Numeric Replies :
-    
-    //     RPL_INVITING RPL_AWAY
-
-    //         Examples :
-    //         : Angel INVITE Wiz #Dust; User Angel inviting WiZ to channel #Dust
-    //         INVITE Wiz #Twilight_Zone; Command to invite WiZ to #Twilight_zone
-
+    c->enqueue_reply(msg.str() + "\r\n");
+    set_event_for_sending_msg(c->getFD());
 }
 
 void Server::kick(Client *c, const Command &command)
