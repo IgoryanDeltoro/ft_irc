@@ -2,6 +2,7 @@
 #define COMMAND_HPP
 
 #include <iostream>
+#include <vector>
 
 enum Commands
 {
@@ -18,8 +19,10 @@ enum Commands
     PRIVMSG,
     QUIT,
     LIST,
-    CAP, //??,
+    CAP,
     PING,
+    // PART
+    //    NOTICE
 };
 
 class Command
@@ -27,29 +30,23 @@ class Command
 private:
     std::string _prefix;
     Commands _command;
-    std::string _mode;
+    std::vector<std::string> _params;
     std::string _text;
+    Command(const Commands &command);
+    Command &operator=(const Commands &command);
 
 public:
-    Command(): _prefix(""), _command(NOT_FOUND), _mode(""), _text("") {};
-    Command(const std::string &prefix, const Commands &command, const std::string &mode, const std::string &text)
-    {
-        _prefix = prefix;
-        _command = command;
-        _mode = mode;
-        _text = text;
-    };
-    Command(const Commands &command)
-    {
-        _command = command;
-    };
+    Command();
+    ~Command();
 
-    void setCommand(const Commands &command);
-    void setMode(const std::string &mode);
-    void setText(const std::string &text);
+    void setPrefix(const std::string &);
+    void setCommand(const Commands &);
+    void addParam(const std::string &);
+    void setText(const std::string &);
 
+    const std::string& getPrefix() const;
     const Commands &getCommand();
-    const std::string &getMode() const;
+    const std::vector<std::string> &getParams() const;
     const std::string &getText() const;
 };
 

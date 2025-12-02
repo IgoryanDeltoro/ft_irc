@@ -3,97 +3,51 @@
 Parser::Parser() {}
 Parser::~Parser() {}
 
-// <message> ::= [':' <prefix> <SPACE> ] <command> <params> <crlf>
-// <params>  ::= <SPACE> [ ':' <trailing> | <middle> <params> ]
-
-Command Parser::parse(Client &c, std::string &line) const
+Command Parser::parse(std::string &line) const
 {
-    (void)c;
-    
+
+    Command cmd;
+
+    trim(line);
+    if (line.empty())
+        return cmd;
 
     std::stringstream ss(line);
-    std::string cmdStr;
-    ss >> cmdStr;
+    std::string token;
 
-    std::cout << "PARSE cmdStr: " << cmdStr << std::endl;
-    Command command;
-    if (cmdStr == "HELP")
-        command.setCommand(HELP);
-    else if (cmdStr == "PASS")
-        command.setCommand(PASS);
-    else if (cmdStr == "NICK")
-        command.setCommand(NICK);
-    else if (cmdStr == "USER")
-        command.setCommand(USER);
-    else if (cmdStr == "JOIN")
-        command.setCommand(JOIN);
-    else if (cmdStr == "MODE")
-        command.setCommand(MODE);
-    else if (cmdStr == "KICK")
-        command.setCommand(KICK);
-    else if (cmdStr == "TOPIC")
-        command.setCommand(TOPIC);
-    else if (cmdStr == "INVITE")
-        command.setCommand(INVITE);
-    else if (cmdStr == "PRIVMSG")
-        command.setCommand(PRIVMSG);
-    else if (cmdStr == "LIST")
-        command.setCommand(LIST);
-    else if (cmdStr == "QUIT")
-        command.setCommand(QUIT);
-    else if (cmdStr == "CAP")
-        command.setCommand(CAP);
-    else if (cmdStr == "PING")
-        command.setCommand(PING);
-    else
-        command.setCommand(NOT_FOUND);
-    
-    size_t pos = line.find(" :");
-    if (pos != std::string::npos)
-    {
-        std::cout << "PARSE found :" << std::endl;
-
-        std::string mode = line.substr(cmdStr.size(), pos - cmdStr.size());
-        trim(mode);
-        command.setMode(mode);
-
-        std::string text = line.substr(pos + 2);
-        command.setText(text);
-
-        std::cout << "PARSE mode: " << mode << std::endl;
-        std::cout << "PARSE text: " << text << std::endl;
+    // ---------- 1. Parse prefix ----------
+    if (line[0] == ':') {
+        ss >> token; // token = ":prefix" ":nick!user@host"
+        cmd.setPrefix(token.substr(1)); // remove ':'
     }
-    else
-    {
-        std::cout << "PARSE NOT found :" << std::endl;
 
-        std::string mode = line.substr(cmdStr.size());
-        trim(mode);
-        command.setMode(mode);
-        std::cout << "PARSE mode: " << mode << std::endl;
+    // ---------- 2. Parse command ----------
+    ss >> token;
+    std::string cmdStr = token;
+
+    for (size_t i = 0; i < cmdStr.size(); i++) {
+        cmdStr[i] = std::toupper(cmdStr[i]);
     }
-    return command;
+
+    cmd.setCommand(mapCommand(cmdStr));
+
+    // ---------- 3. Parse parameters ----------
+    while (ss >> token) {
+        if (token[0] == ':') {
+            // It's trailing — grab rest of stream (включая пробелы)
+            std::string trailing = token.substr(1);
+            std::string rest;
+            std::getline(ss, rest);
+            trailing += rest;
+            cmd.setText(trailing);
+            break;
+        }
+        else {
+            cmd.addParam(token);
+        }
+    }
+    return cmd;
 }
-
-// void parse_line(std::string &line)
-// {
-
-// }
-
-// PASS passworf
-// NICK nick
-// USER _user
-// HELP help
-
-
-// JOIN #ch_name
-// INVITE
-// KICK
-// MODE -it #ch_name
-
-
-// MSG username message kjhghskjs ksdhf ksjh kj h
-// Q username message kjhghskjs ksdhf ksjh kj h
 
 void Parser::trim(std::string &s) const {
     size_t start = s.find_first_not_of(" \t\n\r");
@@ -105,35 +59,19 @@ void Parser::trim(std::string &s) const {
         s = s.substr(start, end - start + 1);
 }
 
-std::vector<std::string> Parser::splitParams(const std::string &str) const
-{
-    std::vector<std::string> out;
-    std::stringstream ss(str);
-    std::string word;
-
-    while (ss >> word)
-    {
-        out.push_back(word);
-    }
-    return out;
-}
-
 std::vector<std::string> Parser::splitByComma(const std::string &s)
 {
     std::vector<std::string> splited;
     std::string tmp;
 
-    for (size_t i = 0; i < s.size(); ++i)
-    {
-        if (s[i] == ',')
-        {
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == ',') {
             trim(tmp);
             if (!tmp.empty())
                 splited.push_back(tmp);
             tmp.clear();
         }
-        else
-        {
+        else {
             tmp += s[i];
         }
     }
@@ -147,15 +85,84 @@ bool Parser::isValidNick(const std::string &nick) const
 {
     if (nick.empty())
         return false;
-    if (!isalpha(nick[0]) && nick[0] != '_')
+    if (!std::isalpha(nick[0]) && nick[0] != '_')
         return false;
 
-    for (size_t i = 1; i < nick.size(); i++)
+    for (size_t i = 1; i < nick.size(); ++i)
     {
-        if (!isalnum(nick[i]) &&
-            nick[i] != '_' &&
-            nick[i] != '-')
+        char c = nick[i];
+        if (!std::isalnum(c) &&
+            c != '_' && c != '-' &&
+            c != '[' && c != ']' &&
+            c != '\\' && c != '`' &&
+            c != '^' && c != '{' &&
+            c != '}')
             return false;
     }
     return true;
 }
+
+bool Parser::isValidChannelName(const std::string &name) const
+{
+    if (name.size() < 2) return false;
+    if (name[0] != '#' && name[0] != '&') return false;
+
+    // Name length limit (RFC says up to 200 chars)
+    if (name.size() > 200) return false;
+
+    // Check invalid characters
+    for (size_t i = 1; i < name.size(); ++i)
+    {
+        unsigned char c = name[i];
+
+        if (c == ' ' ||    // space
+            c == ',' ||    // comma
+            c == '\x07' || // BEL (ASCII 7)
+            c == '\0' ||   // NUL
+            c == '\r' ||   // CR
+            c == '\t' ||   // TAB
+            c == '\n') // LF
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Commands Parser::mapCommand(const std::string &cmd) const
+{
+    if (cmd == "PASS") return PASS;
+    if (cmd == "NICK") return NICK;
+    if (cmd == "USER") return USER;
+    if (cmd == "JOIN") return JOIN;
+    if (cmd == "MODE") return MODE;
+    if (cmd == "KICK") return KICK;
+    if (cmd == "TOPIC") return TOPIC;
+    if (cmd == "INVITE") return INVITE;
+    if (cmd == "PRIVMSG") return PRIVMSG;
+    if (cmd == "QUIT") return QUIT;
+    if (cmd == "LIST") return LIST;
+    if (cmd == "CAP") return CAP;
+    if (cmd == "PING") return PING;
+    if (cmd == "HELP") return HELP;
+    return NOT_FOUND;
+}
+
+char Parser::ircLower(char c) const
+{
+    if (c >= 'A' && c <= 'Z')
+        return c + 32;
+    if (c == '{') return '[';
+    if (c == '}') return ']';
+    if (c == '|') return '\\';
+    return c;
+}
+
+std::string Parser::ircLowerStr(const std::string &s) const
+{
+    std::string out = s;
+    for (size_t i = 0; i < out.size(); i++)
+        out[i] = ircLower(out[i]);
+    return out;
+} 

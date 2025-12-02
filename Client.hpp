@@ -9,11 +9,13 @@ class Client {
         bool                    _is_registred;
         bool                    _pass_ok;
         std::string             _nick;
+        std::string             _nickLower;
+
         std::string             _userName;
-        std::string     _realName;
+        std::string             _realName;
         std::string             _recv_buff;
         std::deque<std::string> _send_msg;
-    
+        Client();
     public:
         Client(int fd);
         bool operator!=(const Client &c) const;

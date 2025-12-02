@@ -3,14 +3,18 @@
 #include <iostream>
 #include <set>
 #include <map>
+#include "Client.hpp"
 
 class Client;
 
 class Channel {
     private:
-        // int             _fd;
+        Channel();
+        Channel(const Channel &copy);
+        Channel &operator=(const Channel &src);
 
         std::string _name;
+        std::string _nameLower;
         std::string _topic;
         std::string _password;
         int _userLimit;
@@ -18,109 +22,49 @@ class Channel {
         bool _i;
         bool _t;
         bool _k;
-        //bool o: Give/take channel operator privilege
         bool _l;
 
-        std::set<std::string> _operators;
-        std::set<std::string> _users;
-        std::set<std::string> _invited;
+        std::set<std::string> _operators; //nick lower
+        std::map<std::string, Client *> _users; //nick lower
+        std::set<std::string> _invited; //nick lower
 
     public:
-        Channel(const std::string &name, Client *client) : _name(name), _topic(""), _password(""), _userLimit(-1), _i(false), _t(false), _k(false), _l(false)
-        {
-            addUser(client);
-            addOperator(client->getNick());
-        }
-        ~Channel() {}
+        Channel(const std::string &name, Client *client);
+        ~Channel();
 
-        bool isI() const { return _i; }
-        bool isT() const { return _t; }
-        bool isK() const { return _k; }
-        bool isL() const { return _l; }
+        bool isI() const;
+        bool isT() const;
+        bool isK() const;
+        bool isL() const;
+        bool isUser(const std::string &nick) const;
+        bool isOperator(const std::string &nick) const;
+        bool isInvited(const std::string &nick) const;
 
-        bool isUser(const std::string &nick) const { return _users.count(nick) != 0; }
-        bool isOperator(const std::string &nick) const { return _operators.count(nick) != 0; }
+        void addOperator(const std::string &nick);
+        void addUser(Client *c);
+        void addInvite(const std::string &nick);
 
-        void addOperator(const std::string &nick)
-        {
-            _operators.insert(nick);
-        };
+        void removeOperator(const std::string &nick);
+        void removeUser(Client *c);
+        void removeInvite(const std::string &nick);
 
-        void removeOperator(const std::string &nick)
-        {
-            _operators.erase(nick);
-        };
+        std::set<std::string> &getInvited();
+        std::set<std::string> &getOperators();
+        std::map<std::string, Client *> &getUsers();
+        const int &getUserLimit() const;
 
-        void addUser(Client *c)
-        {
-            _users.insert(c->getNick());
-        }
+        const std::string &getPassword() const;
+        const std::string &getTopic() const;
+        const std::string &getName() const;
 
-        void removeUser(Client *c)
-        {
-            _users.erase(c->getNick());
-            _operators.erase(c->getNick()); // если был оператором
-            _invited.erase(c->getNick());   // если был приглашён
-        }
+        void broadcast(Client *from, const std::string &msg);
 
-        bool isInvited(const std::string &nick) const
-        {
-            return _invited.count(nick) != 0;
-        }
-
-        void addInvite(const std::string &nick)
-        {
-            _invited.insert(nick);
-        }
-
-        std::set<std::string> &getInvited()
-        {
-            return _invited;
-        }
-
-        std::set<std::string> &getOperators()
-        {
-            return _operators;
-        }
-
-        std::set<std::string> &getUsers()
-        {
-            return _users;
-        }
-
-        const int &getUserLimit() const
-        {
-            return _userLimit;
-            ;
-        }
-
-        const std::string &getPassword() const
-        {
-            return _password;
-        }
-
-        const std::string &getTopic() const
-        {
-            return _topic;
-        }
-
-        void broadcast(Client *from, const std::string &msg) {
-            (void)from;
-            (void)msg;
-
-            // std::set<std::string>::iterator it = _users.begin();
-
-
-            // for (; it != _users.end(); ++it) {
-            //     if (from && from->getFD() != it->second->getFD())
-            //         it->second->enqueue_reply(msg);
-            // }
-        }
-
-        void setTopic(const std::string &topic)
-        {
-            _topic = topic;
-        }
+        void setTopic(const std::string &topic);
+        void setPassword(const std::string &password);
+        void setK(const bool &k, const std::string &password);
+        void setI(const bool &i);
+        void setT(const bool &t);
+        void setL(const int &limit);
 };
 
 #endif

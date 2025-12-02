@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 #include <iostream>
+#include <sstream>
 #include <stdlib.h>
 #include <vector>
 #include <map>
@@ -43,6 +44,7 @@ enum Error
     ERR_NICKNAMEINUSE = 433,
     ERR_USERNOTINCHANNEL = 441,
     ERR_NOTONCHANNEL = 442,
+    ERR_USERONCHANNEL = 443,
     ERR_NEEDMOREPARAMS = 461,
     ERR_ALREADYREGISTRED = 462,
     ERR_CHANNELISFULL = 471,
@@ -52,7 +54,6 @@ enum Error
     ERR_BADCHANMASK = 476,
     ERR_CHANOPRIVSNEEDED = 482,
 
-
     // IRC numeric error replies
     ERR_NORECIPIENT = 411,
     ERR_NOTEXTTOSEND = 412,
@@ -61,6 +62,8 @@ enum Error
     ERR_WILDTOPLEVEL = 414,
     ERR_TOOMANYTARGETS = 407,
     ERR_NOSUCHNICK = 401,
+    ERR_KEYSET = 467,
+    ERR_UNKNOWNMODE = 472,
 
     // IRC numeric reply
     RPL_AWAY = 301,
@@ -73,9 +76,9 @@ class Server {
         std::string                 _password;
         std::vector<struct pollfd>  _pfds;
         std::map<int, Client*>      _clients;
-        std::map<std::string, Channel *> _channels;
+        std::map<std::string, Client*>  _nicks;  //nick lower
+        std::map<std::string, Channel*> _channels;  //ch name Lower lower
         Parser _parser;
-        std::map<std::string, Client*>  _nicks;
 
         Server();
         Server(const Server &other);
@@ -90,6 +93,8 @@ class Server {
         std::string getErrorText(const Error &error);
         ssize_t send_message_to_client(int, std::string);
         void set_event_for_sending_msg(int fd);
+
+        void removeClientFromAllChannels(Client *c);
 
     public:
         Server(const std::string &port, const std::string &password);
@@ -113,13 +118,11 @@ class Server {
         bool isNickExists(const std::string &, Client *);
         void joinChannel(Client *, const std::string &, const std::string &);
         bool isClientAuth(Client *);
-
+        Client *getClientByNick(const std::string &nick);
         void kickClientFromChannel(Channel &, Client *);
 
         void sendError(Client *c, Error err, const std::string &arg);
-
         void sendWelcome(Client *c);
-
 };
 
 #endif

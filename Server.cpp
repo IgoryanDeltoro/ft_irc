@@ -141,8 +141,8 @@ void Server::eccept_new_fd() {
         _pfds.push_back(pa);
 
         std::cout << "Accepted fd=" << new_fd << std::endl; 
-        _clients[new_fd]->enqueue_reply("Welcome to IRC chat.\r\n");
-        set_event_for_sending_msg(_clients[new_fd]->getFD());
+        // _clients[new_fd]->enqueue_reply("Welcome to IRC chat.\r\n");
+        // set_event_for_sending_msg(_clients[new_fd]->getFD());
     }
 }
 
@@ -226,9 +226,13 @@ void Server::clean_fd(int fd) {
     std::string def_nick = it->second->getNick().empty() ? "*_" : it->second->getNick();
     std::cout << GREEN "User " << def_nick << " leave session" RESET << std::endl;
     
-    // don't foget to remove from channels
-
     close(it->first);
+
+    if (!it->second->getNick().empty()) {
+        _nicks.erase(it->second->getNick());
+    }
+    removeClientFromAllChannels(it->second);
+
     delete it->second;
     _clients.erase(it);
 
@@ -244,7 +248,7 @@ void Server::clean_fd(int fd) {
 
 void Server::pass(Client *c, const Command &command)
 {
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
 
     if (params.size() != 1)
     {
@@ -277,7 +281,10 @@ bool Server::isNickExists(const std::string &nick, Client *client)
     for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it)
     {
         Client *c = it->second;
-        if (c != client && c->getNick() == nick)
+        std::string lowerClientNick = _parser.ircLowerStr(nick);
+        std::string lowerNickToFind = _parser.ircLowerStr(c->getNick());
+
+        if (c != client && lowerNickToFind == lowerClientNick)
             return true;
     }
     return false;
@@ -291,7 +298,7 @@ void Server::nick(Client *c, const Command &command)
         return;
     }
 
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
     if (params.size() < 1)
     {
         sendError(c, ERR_NONICKNAMEGIVEN, "");
@@ -327,17 +334,13 @@ void Server::nick(Client *c, const Command &command)
     }
     else
     {
+        _nicks.erase(oldNick);
+
         std::string msg = ":" + oldNick + " NICK " + newNick + "\r\n";
         std::cout << msg;
-
-
-        // Разошли клиенту, и всем в его каналах:
-        // c->enqueue_reply(msg);
-        // std::map<std::string, Channel*>::iterator it = _channels.begin();
-        // for (; it != _channels.end(); ++it) {
-        //     if (it->second->isUser(c))
-        //         it->second->broadcast(c, msg); // если реализовано
-        // }        
+        c->setRegStatus(true);
+        // todo: to client + all in channels with client (now sendWelcome!)
+        sendWelcome(c);
     }
 }
 
@@ -348,11 +351,11 @@ void Server::user(Client *c, const Command &command)
         sendError(c, ERR_NEEDPASS, "");
         return;
     }
+    std::vector<std::string> params = command.getParams();
 
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
-    std::cout << "USER Command params:" << std::endl;
-    for (size_t i = 0; i < params.size(); i++)
-        std::cout << i << ": " << params[i] << std::endl;
+    // std::cout << "USER Command params:" << std::endl;
+    // for (size_t i = 0; i < params.size(); i++)
+    //     std::cout << i << ": " << params[i] << std::endl;
 
     if (params.size() < 3 || command.getText().empty())
     {
@@ -362,7 +365,7 @@ void Server::user(Client *c, const Command &command)
 
     std::string userName = params[0];
     _parser.trim(userName);
-     if (userName.empty())
+    if (userName.empty())
     {
         sendError(c, ERR_NEEDMOREPARAMS, "USER");
         return;
@@ -387,7 +390,6 @@ void Server::user(Client *c, const Command &command)
     if (!c->getNick().empty() && !c->getUserName().empty() && !c->getRealName().empty()&&  c->getPassStatus())
     {
         c->setRegStatus(true);
-
         sendWelcome(c);
         // c->enqueue_reply(GREEN "User is REGISTERED" RESET "\r\n");
         // set_event_for_sending_msg(c->getFD());
@@ -398,130 +400,62 @@ void Server::join(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
-    std::cout << "JOIN Command params:" << std::endl;
-    for (size_t i = 0; i < params.size(); i++)
-        std::cout << i << ": " << params[i] << std::endl;
+    // Command: JOIN
+    // Parameters: <channel>{,<channel>} [<key>{,<key>}]
 
+    std::vector<std::string> params = command.getParams();
     if (params.empty())
     {
         sendError(c, ERR_NEEDMOREPARAMS, "JOIN");
         return;
     }
 
-    
-    // JOIN 0 → leave all channels
-    // if (params[0] == "0")
-    // {
-    //     leaveAllChannels(c);
-    //     return;
-    // }
-
-    // channels (#a,#b,#c)
-
-    // trim params[0] ?
     std::vector<std::string> channelNames = _parser.splitByComma(params[0]);
     std::vector<std::string> keys;
 
     if (params.size() > 1)
     {
-        // trim params[1]
+        _parser.trim(params[1]);
         keys = _parser.splitByComma(params[1]);
     }
 
-    for (size_t i = 0; i < channelNames.size(); ++i)
+    for (size_t i = 0; i < channelNames.size(); i++)
     {
         std::string chan = channelNames[i];
         std::string key = (i < keys.size() ? keys[i] : "");
 
+        if (!_parser.isValidChannelName(chan))
+        {
+            sendError(c, ERR_BADCHANMASK, chan);
+            continue;
+        }
+
         joinChannel(c, chan, key);
     }
-
-    //    If the channel doesn't exist prior to joining,
-    // the channel is created and the creating user becomes a
-    // channel operator. If the channel already exists, whether or not your request to JOIN that channel is honoured depends on the current modes of the channel. For example, if the channel is invite-only, (+i) then you may only join if invited. As part of the protocol, a user
-    // may be a part of several channels at once, but a limit of ten (10)
-    // channels is recommended as being ample for both experienced and
-    // novice users. See section 8.13 for more information on this.
-
-    // The JOIN command is used by client to start listening a specific channel.Whether or  not a client is allowed to join a channel is checked only by the server the client is connected to;
-    // all other servers automatically add the user to the channel when it is received from other servers.The conditions which affect this are as follows :
-
-    //     1. the user must be invited if the channel is invite -
-    //     only;
-    // 2. the user's nick/username/hostname must not match any active bans;
-
-    //  3. the correct key (password) must be given if it is set.
-
-    //  These are discussed in more detail under the MODE command (see
-    //  section 4.2.3 for more details).
-
-    //  Once a user has joined a channel, they receive notice about all
-    //  commands their server receives which affect the channel. This
-    //  includes MODE, KICK, PART, QUIT and of course PRIVMSG/NOTICE. The
-    //  JOIN command needs to be broadcast to all servers so that each server
-    //  knows where to find the users who are on the channel. This allows
-    //  optimal delivery of PRIVMSG/NOTICE messages to the channel.
-
-    //  If a JOIN is successful, the user is then sent the channel's topic
-    //  (using RPL_TOPIC) and the list of users who are on the channel (using
-    //  RPL_NAMREPLY), which must include the user joining.
-
-    //  Numeric Replies:
-
-    //  ERR_NEEDMOREPARAMS ERR_BANNEDFROMCHAN
-    //  ERR_INVITEONLYCHAN ERR_BADCHANNELKEY
-    //  ERR_CHANNELISFULL ERR_BADCHANMASK
-    //  ERR_NOSUCHCHANNEL ERR_TOOMANYCHANNELS
-    //  RPL_TOPIC
-
-    //  Examples:
-
-    //  JOIN #foobar ;
-    //  join channel #foobar.
-
-    //  JOIN &foo fubar;
-    //  join channel &foo using key "fubar".
-
-    //  JOIN #foo, &bar fubar;
-    //  join channel #foo using key "fubar" and &bar using no key.
-
-    //  JOIN #foo, #bar fubar, foobar;
-    //  join channel #foo using key "fubar". and channel #bar using key "foobar".
-
-    //  JOIN #foo, #bar;
-    //  join channels #foo and#bar.
-
-    //  : WiZ JOIN #Twilight_zone;
-    //  JOIN message from WiZ
 }
 
 void Server::joinChannel(Client *c, const std::string &name, const std::string &password)
 {
-    //проверить имя на валидность!
-
     Channel *ch;
 
     if (_channels.count(name) == 0)
     {
         ch = new Channel(name, c);
+        if (!password.empty())
+        {
+            ch->setK(true, password);
+        }
         _channels[name] = ch;
-        ch->addUser(c);
-        ch->addOperator(c->getNick());
-        send_message_to_client(c->getFD(), ": Channel " + name + " added with new user as operator\r\n");
-        return;
     }
     else
     {
         ch = _channels[name];
-        // +i (invite only)
-        if (ch->isI() && ch->getInvited().count(c->getNick()) == 0)
+
+        if (ch->isI() && !ch->isOperator(c->getNick()))
         {
             sendError(c, ERR_INVITEONLYCHAN, name);
             return;
         }
-
-        // +k (password)
         if (!ch->getPassword().empty() && ch->getPassword() != password)
         {
             sendError(c, ERR_BADCHANNELKEY, name);
@@ -535,54 +469,168 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
             return;
         }
 
-        const std::set<std::string> &users = ch->getUsers(); // предполагаем getUsers() const -> const&
-        std::string nick = c->getNick();
-        if (users.find(nick) != users.end())
+        if (ch->isUser(c->getNick()))
         {
-            send_message_to_client(c->getFD(), ":Channel " + name + " USER already in channel\r\n");
+            // send_message_to_client(c->getFD(), ":Channel " + name + " USER already in channel\r\n");
             return;
         }
+
+
         ch->addUser(c);
-        send_message_to_client(c->getFD(), ":Channel " + name + " USER ADDED\r\n");
+        //:nick!user@host JOIN #channel
     }
+
+    //for all in channel
+    
+    c->enqueue_reply(":" + c->getNick() + "!" + c->getUserName() + "@" + "<host>" +" :END!\r\n");
+
+    set_event_for_sending_msg(c->getFD());
+
+    // • При успешном join отправлять :
+	// • RPL_TOPIC — тема канала
+    //332 RPL_TOPIC
+        //"<channel> :<topic>"
+
+	// • RPL_NAMREPLY — список пользователей на канале
+    //353 RPL_NAMREPLY
+    // "<channel> :[[@|+]<nick> [[@|+]<nick> [...]]]"
+    //:nick!user@host JOIN #channel
+
+
+    //Ты должен отправить список пользователей:
+    //:server 353 nick = #chan :@op1 +voiced1 user3 ...
+    //:server 366 nick #chan :End of /NAMES list.
 }
 
 void Server::mode(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-    (void)command;
-    //     MODE #Finnish + im;
-    //     Makes #Finnish channel moderated and 'invite-only'.
+    // Parameters:
+    //  <channel> {[+| -] | o | p | s | i | t | n | b | v}[<limit>][<user>]
+    std::vector<std::string> params = command.getParams();
+    if (params.empty())
+    {
+        sendError(c, ERR_NEEDMOREPARAMS, "MODE");
+        return;
+    }
+    std::string target = params[0]; // канал
+    if (!target.empty() && !(target[0] == '#' || target[0] == '&'))
+        return;
 
-    //      MODE #Finnish +o Kilroy;
-    //     Gives 'chanop' privileges to Kilroy on channel #Finnish.
+    if (!_parser.isValidChannelName(target))
+    {
+        sendError(c, ERR_BADCHANMASK, target);
+        return;
+    }
 
-    //         MODE #Finnish +
-    //         v Wiz;
-    //     Allow WiZ to speak on #Finnish.
+    Channel *ch = NULL;
 
-    //         MODE #Fins -
-    //         s;
-    //     Removes 'secret' flag from channel
-    // #Fins.
+    if (_channels.count(target) == 0)
+    {
+        sendError(c, ERR_NOSUCHCHANNEL, target);
+        return;
+    }
+    ch = _channels[target];
 
-    //             MODE #42 +
-    //         k oulu;
-    //     Set the channel key to "oulu".
+    if (!ch->isUser(c->getNick()))
+    {
+        sendError(c, ERR_NOTONCHANNEL, target);
+        return;
+    }
+    if (!ch->isOperator(c->getNick()))
+    {
+        sendError(c, ERR_CHANOPRIVSNEEDED, target);
+        return;
+    }
 
-    //         MODE #eu -
-    //         opers + l 10; Set the limit for the number of users
-    //      on channel to 10.
+    std::string modeStr = (params.size() > 1 ? params[1] : "");
+    std::vector<std::string> args;
+    for (size_t i = 2; i < params.size(); ++i)
+        args.push_back(params[i]);
 
-    //      MODE &oulu +b ; list ban masks set for channel.
+    bool adding = true;
+    size_t argIndex = 0;
 
-    //      MODE &oulu +b *!*@* ;
-    //     prevent all users from joining.
+    for (size_t i = 0; i < modeStr.size(); i++)
+    {
+        char f = modeStr[i];
+        if (f == '+')
+        {
+            adding = true;
+            continue;
+        }
+        if (f == '-')
+        {
+            adding = false;
+            continue;
+        }
 
-    //         MODE &oulu +
-    //         b * !*@ *.edu;
-    //     prevent any user from a hostname matching *.edu from joining.
+        switch (f)
+        {
+        case 'i':
+            ch->setI(adding);
+            break;
+        case 't':
+            ch->setT(adding);
+            break;
+        case 'k':
+            if (adding)
+            {
+                if (argIndex >= args.size())
+                {
+                    sendError(c, ERR_NEEDMOREPARAMS, "MODE " + target);
+                    return;
+                }
+                ch->setK(true, args[argIndex++]);
+            }
+            else
+            {
+                ch->setK(false, "");
+            }
+            break;
+        case 'l':
+            if (adding)
+            {
+                if (argIndex >= args.size())
+                {
+                    sendError(c, ERR_NEEDMOREPARAMS, "MODE " + target);
+                    return;
+                }
+                int lim;
+                std::istringstream(args[argIndex++]) >> lim;
+                ch->setL(lim);
+            }
+            else
+            {
+                ch->setL(-1);
+            }
+            break;
+        case 'o':
+            if (argIndex >= args.size())
+            {
+                sendError(c, ERR_NEEDMOREPARAMS, "MODE " + target);
+                return;
+            }
+            else
+            {
+                Client *user = getClientByNick(args[argIndex++]);
+                if (!user)
+                {
+                    sendError(c, ERR_NOSUCHNICK, args[argIndex - 1]);
+                    return;
+                }
+                if (adding)
+                    ch->addOperator(user->getNick());
+                else
+                    ch->removeOperator(user->getNick());
+            }
+            break;
+        default:
+            sendError(c, ERR_UNKNOWNMODE, std::string(1, f));
+            break;
+        }
+    }
 }
 
 bool Server::isClientAuth(Client *client)
@@ -605,48 +653,37 @@ void Server::invite(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
+// Command:  INVITE
+// Parameters: <nickname> <channel>
 
-        //             The INVITE message is used to invite users to a channel.The parameter<nickname>
-        //                     is the nickname of the person to be invited to
-        //                         the target channel<channel>
-        //                             .There is no requirement that the
-        //                                 channel the target user is being invited to must exist or
-        //         be a valid
-        //             channel.To invite a user to a channel which is invite only(MODE + i),
-        //         the client sending the invite must be recognised as being a
-        //             channel
-        //             operator on the given channel.
-
-        //         Numeric Replies :
-
-        //         ERR_NOSUCHNICK
-        //         ERR_NOTONCHANNEL ERR_USERONCHANNEL
-        //         ERR_CHANOPRIVSNEEDED
-        //         RPL_INVITING RPL_AWAY
-
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
-    std::cout << "JOIN Command params:" << std::endl;
-    for (size_t i = 0; i < params.size(); i++)
-        std::cout << i << ": " << params[i] << std::endl;
+    std::vector<std::string>  params = command.getParams();
+    // std::cout << "JOIN Command params:" << std::endl;
+    // for (size_t i = 0; i < params.size(); i++)
+    //     std::cout << i << ": " << params[i] << std::endl;
 
     if (params.size() < 2)
     {
-        sendError(c, ERR_NEEDMOREPARAMS, "JOIN");
+        sendError(c, ERR_NEEDMOREPARAMS, "INVITE");
         return;
     }
-    // <nickname><channel>
     std::string nick = params[0];
     std::string channel = params[1];
 
-    // check NIC CHAN
-
-
-    //проверить ник в базе
+    if (!_parser.isValidNick(nick))
+    {
+        sendError(c, ERR_NOSUCHNICK, nick);
+        return;
+    }
+    if (!_parser.isValidChannelName(channel))
+    {
+        sendError(c, ERR_BADCHANMASK, channel);
+        return;
+    }
 
     Channel *ch;
     if (_channels.count(channel) == 0)
     {
-        sendError(c, ERR_NOTONCHANNEL, channel);
+        sendError(c, ERR_NOSUCHCHANNEL, channel);
         return;
     }
     ch = _channels[channel];
@@ -657,43 +694,30 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
 
-     // +i (invite only)
-    if (ch->isI() && ch->getOperators().count(c->getNick()) == 0)
-    {
-        sendError(c, ERR_INVITEONLYCHAN, channel);
+    if (ch->isI() && !ch->isOperator(c->getNick())) {
+        sendError(c, ERR_CHANOPRIVSNEEDED, channel);
         return;
     }
 
-    //     // +k (password)
-    //     if (!ch->getPassword().empty() && ch->getPassword() != password)
-    //     {
-    //         sendError(c, ERR_BADCHANNELKEY, name);
-    //         return;
-    //     }
+    Client *invitee = getClientByNick(nick);
+    if (!invitee) {
+        sendError(c, ERR_NOSUCHNICK, nick);
+        return;
+    }
+    if (ch->isUser(nick)) {
+        sendError(c, ERR_USERONCHANNEL, channel);//todo error user!?
+        return;
+    }
+    if (!ch->isInvited(nick)) {
+        ch->addInvite(nick);
+    }
 
-    //     // +l (user limit)
-    //     if (ch->getUserLimit() > 0 && (int)ch->getUsers().size() >= ch->getUserLimit())
-    //     {
-    //         sendError(c, ERR_CHANNELISFULL, name);
-    //         return;
-    //     }
+    // :<inviter> INVITE <nickname> :<channel>
+    std::stringstream msg;
+    msg << ":" << c->getNick() << " INVITE " << invitee->getNick() << " :" << ch->getName();
 
-    //     const std::map<int, Client *> &users = ch->getUsers(); // предполагаем getUsers() const -> const&
-    //     int fd = c->getFD();
-    //     if (users.find(fd) != users.end())
-    //     {
-    //         send_message_to_client(fd, ":Channel " + name + " USER already in channel\r\n");
-    //         return;
-    //     }
-    //     ch->addUser(c);
-    //     send_message_to_client(c->getFD(), ":Channel " + name + " USER ADDED\r\n");
-    
-
-    //         Examples :
-    //         : Angel INVITE Wiz #Dust; User Angel inviting WiZ to channel #Dust
-    //         INVITE Wiz #Twilight_Zone; Command to invite WiZ to #Twilight_zone
-
-    ch->addInvite(nick);
+    c->enqueue_reply(msg.str() + "\r\n");
+    set_event_for_sending_msg(c->getFD());
 }
 
 void Server::kick(Client *c, const Command &command)
@@ -714,7 +738,7 @@ void Server::kick(Client *c, const Command &command)
     // <channel> <user> [<comment>]
     // <channel>{, <channel>} < user>{, <user>}[<comment>]
 
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
     std::cout << "JOIN Command params:" << std::endl;
     for (size_t i = 0; i < params.size(); i++)
         std::cout << i << ": " << params[i] << std::endl;
@@ -820,7 +844,7 @@ void Server::kick(Client *c, const Command &command)
 void Server::kickClientFromChannel(Channel &channel, Client *client)
 {
     const std::string kickedNick = client->getNick();
-    std::set<std::string> &users = channel.getUsers();
+    std::map<std::string, Client*> &users = channel.getUsers();
     std::set<std::string> &operators = channel.getOperators();
     std::set<std::string> &invited = channel.getInvited();
 
@@ -860,8 +884,9 @@ void Server::topic(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
-    std::cout << "TOPIC Command params:" << std::endl;
+    std::vector<std::string> params = command.getParams();
+
+std::cout << "TOPIC Command params:" << std::endl;
     for (size_t i = 0; i < params.size(); i++)
         std::cout << i << ": " << params[i] << std::endl;
 
@@ -929,7 +954,7 @@ void Server::topic(Client *c, const Command &command)
 
 void Server::cap(Client *c, const Command &command)
 {
-    std::vector<std::string> params = _parser.splitParams(command.getMode());
+    std::vector<std::string> params = command.getParams();
     if (params.size() == 0) return;
     if (params[0] == "LS") 
     {
@@ -942,12 +967,20 @@ void Server::cap(Client *c, const Command &command)
 
 void Server::ping(Client *c, const Command &command)
 {
-    std::string arg = command.getMode();
+    std::string arg;
+
+    if (!command.getText().empty())
+        arg = command.getText();
+    else if (!command.getParams().empty())
+        arg = command.getParams()[0];
 
     if (arg.empty())
-        return; // по RFC можно игнорировать
+        return;
 
-    send_message_to_client(c->getFD(), "PONG :" + arg + "\r\n");
+    c->enqueue_reply("PONG :" + arg + "\r\n");
+    set_event_for_sending_msg(c->getFD());
+
+
 }
 
 void Server::sendError(Client *c, Error err, const std::string &arg)
@@ -978,14 +1011,12 @@ std::string Server::getErrorText(const Error &error)
 {
     switch (error)
     {
-    // case :
-    //     return ""
-    // case :
-    //     return ""
-    // case :
-    //     return ""
-    // case :
-    //     return ""
+    case ERR_KEYSET:
+        return "<channel> :Channel key already set";
+    case ERR_UNKNOWNMODE:
+        return "<char> :is unknown mode char to me";
+    case ERR_USERONCHANNEL:
+        return "<user> <channel> :is already on channel";
     case ERR_USERNOTINCHANNEL:
         return "<nick> <channel> :They aren't on that channel";
     case ERR_CHANOPRIVSNEEDED:
@@ -1052,40 +1083,27 @@ void Server::process_line(Client *c, std::string line)
     if (line.empty())
     {
         return;
-        Command("", NOT_FOUND, "", ""); //???
+        // Command("", NOT_FOUND, "", ""); //???
     }
 
-    Command cmnd = _parser.parse(*c, line);
+    Command cmnd = _parser.parse(line);
 
     if (cmnd.getCommand() == NOT_FOUND) {
         c->enqueue_reply("Command not found <" + line + ">\r\n");
         set_event_for_sending_msg(c->getFD());
     }
-
-    else if (cmnd.getCommand() == HELP)
-        help(c);
-    else if (cmnd.getCommand() == PASS)
-        pass(c, cmnd);
-    else if (cmnd.getCommand() == NICK)
-        nick(c, cmnd);
-    else if (cmnd.getCommand() == USER)
-        user(c, cmnd);
-    else if (cmnd.getCommand() == JOIN)
-        join(c, cmnd);
-    else if (cmnd.getCommand() == MODE)
-        mode(c, cmnd);
-    else if (cmnd.getCommand() == KICK)
-        kick(c, cmnd);
-    else if (cmnd.getCommand() == TOPIC)
-        topic(c, cmnd);
-    else if (cmnd.getCommand() == INVITE)
-        invite(c, cmnd);
-    else if (cmnd.getCommand() == CAP)
-        cap(c, cmnd);
-    else if (cmnd.getCommand() == PRIVMSG)
-        privmsg(c, cmnd);
-    else if (cmnd.getCommand() == PING)
-        ping(c, cmnd);
+    else if (cmnd.getCommand() == HELP) help(c);
+    else if (cmnd.getCommand() == PASS) pass(c, cmnd);
+    else if (cmnd.getCommand() == NICK) nick(c, cmnd);
+    else if (cmnd.getCommand() == USER) user(c, cmnd);
+    else if (cmnd.getCommand() == JOIN) join(c, cmnd);
+    else if (cmnd.getCommand() == MODE) mode(c, cmnd);
+    else if (cmnd.getCommand() == KICK) kick(c, cmnd);
+    else if (cmnd.getCommand() == TOPIC) topic(c, cmnd);
+    else if (cmnd.getCommand() == INVITE) invite(c, cmnd);
+    else if (cmnd.getCommand() == CAP) cap(c, cmnd);
+    else if (cmnd.getCommand() == PRIVMSG) privmsg(c, cmnd);
+    else if (cmnd.getCommand() == PING) ping(c, cmnd);
 }
 
 void Server::set_event_for_sending_msg(int fd) {
@@ -1097,45 +1115,73 @@ void Server::set_event_for_sending_msg(int fd) {
     }
 }
 
-
-void Server::sendWelcome(Client *c)
+void Server::removeClientFromAllChannels(Client *c)
 {
+    std::string nick = c->getNick();
+
+    for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end();) {
+        Channel *ch = it->second;
+
+        ch->removeOperator(nick);
+        ch->removeUser(c);
+        ch->removeInvite(nick);
+
+        if (ch->getUsers().empty()) {
+            delete ch;
+            _channels.erase(it);
+        } else {
+            it++;
+        }
+    }
+}
+
+void Server::sendWelcome(Client *c) {
     std::string nick = c->getNick();
 
     c->enqueue_reply(":server 001 " + nick + " :Welcome to server!!!!!!\r\n");
     c->enqueue_reply(":server 002 " + nick + " :Your host is server\r\n");
     c->enqueue_reply(":server 003 " + nick + " :This server was created today\r\n");
-
     c->enqueue_reply(":server 375 " + nick + " :server Message\r\n");
-
     c->enqueue_reply(":server 372 " + nick + " :Welcome!\r\n");
-
     c->enqueue_reply(":server 376 " + nick + " :END!\r\n");
 
     set_event_for_sending_msg(c->getFD());
 }
 
-void Server::privmsg(Client *c, const Command &cmd) {
-    if (cmd.getText().empty()) {sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG"); return; };
-    if (cmd.getMode().empty()) {sendError(c, ERR_NORECIPIENT, "PRIVMSG"); return; };
-
-    std::string R = RESET;
-    std::stringstream ss(cmd.getMode());
-    std::string target;
-    while (std::getline(ss, target,',')) {
-        if (target[0] == '#') {
-            // send message to target in group
-            std::map<std::string, Channel*>::iterator it = _channels.find(target);
-            if (it == _channels.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
-            std::string sender = (c->getNick().empty() ? "*" : c->getNick());
-            it->second->broadcast(c, ":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
-        } else {
-            // send message to target
-            std::map<std::string, Client*>::iterator it = _nicks.find(target);
-            if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
-            std::string sender = (c->getNick().empty() ? "*" : c->getNick());
-            it->second->enqueue_reply(":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
-            set_event_for_sending_msg(it->second->getFD());
-        }
+Client *Server::getClientByNick(const std::string &nick)
+{
+    std::map<int, Client *>::iterator it;
+    for (it = _clients.begin(); it != _clients.end(); it++)
+    {
+        if (it->second && it->second->getNick() == nick)
+            return it->second;
     }
+    return NULL;
+}
+
+void Server::privmsg(Client *c, const Command &cmd) {
+    (void)c;
+    (void)cmd;
+    //     if (cmd.getParams().empty()) {sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG"); return; };
+    // if (cmd.getParams().empty()) {sendError(c, ERR_NORECIPIENT, "PRIVMSG"); return; };
+
+    // std::string R = RESET;
+    // std::stringstream ss(cmd.getParams());
+    // std::string target;
+    // while (std::getline(ss, target,',')) {
+    //     if (target[0] == '#') {
+    //         // send message to target in group
+    //         std::map<std::string, Channel*>::iterator it = _channels.find(target);
+    //         if (it == _channels.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
+    //         std::string sender = (c->getNick().empty() ? "*" : c->getNick());
+    //         it->second->broadcast(c, ":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
+    //     } else {
+    //         // send message to target
+    //         std::map<std::string, Client*>::iterator it = _nicks.find(target);
+    //         if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
+    //         std::string sender = (c->getNick().empty() ? "*" : c->getNick());
+    //         it->second->enqueue_reply(":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
+    //         set_event_for_sending_msg(it->second->getFD());
+    //     }
+    // }
 }
