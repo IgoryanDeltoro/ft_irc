@@ -28,6 +28,9 @@ class Parser {
         Commands mapCommand(const std::string &cmd) const;
         bool isValidNick(const std::string &) const;
         bool isValidChannelName(const std::string &name) const;
+        char ircLower(char c) const;
+        std::string ircLowerStr(const std::string &s) const;
+ 
 };
 
 #endif

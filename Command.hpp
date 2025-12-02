@@ -25,13 +25,6 @@ enum Commands
     //    NOTICE
 };
 
-struct ModeChange
-{
-    bool adding; // true = +, false = -
-    char flag;
-    std::string arg; // e.g. key in +k
-};
-
 class Command
 {
 private:

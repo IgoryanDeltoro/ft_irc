@@ -2,7 +2,8 @@
 
 Channel::Channel(const std::string &name, Client *client) : _name(name), _topic(""), _password(""), _userLimit(-1), _i(false), _t(false), _k(false), _l(false)
 {
-    addUser(client->getNick());
+
+    addUser(client);
     addOperator(client->getNick());
 }
 Channel::~Channel() {}
@@ -15,20 +16,20 @@ bool Channel::isUser(const std::string &nick) const { return _users.count(nick) 
 bool Channel::isOperator(const std::string &nick) const { return _operators.count(nick) != 0; }
 bool Channel::isInvited(const std::string &nick) const { return _invited.count(nick) != 0; }
 
-void Channel::addUser(const std::string &nick) { _users.insert(nick); }
+void Channel::addUser(Client *c) { _users[c->getNick()] = c; }
 void Channel::addOperator(const std::string &nick) { _operators.insert(nick); }
 void Channel::addInvite(const std::string &nick) { _invited.insert(nick); }
 
 
 void Channel::removeOperator(const std::string &nick) { _operators.erase(nick); }
 void Channel::removeInvite(const std::string &nick) { _invited.erase(nick); }
-void Channel::removeUser(const std::string &nick)
+void Channel::removeUser(Client *c)
 {
-    _users.erase(nick);
+    _users.erase(c->getNick());
 }
 
 std::set<std::string> &Channel::getOperators() { return _operators; }
-std::set<std::string> &Channel::getUsers() { return _users; }
+std::map<std::string, Client *> &Channel::getUsers() { return _users; }
 std::set<std::string> &Channel::getInvited() { return _invited; }
 
 const int &Channel::getUserLimit() const { return _userLimit; }
@@ -68,7 +69,7 @@ void Channel::setT(const bool &t)
 
 void Channel::setL(const int &limit)
 {
-    if (limit) {
+    if (limit > 0) {
         _l = true;
         _userLimit = limit;
     }

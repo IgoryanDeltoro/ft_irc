@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 #include <iostream>
+#include <sstream>
 #include <stdlib.h>
 #include <vector>
 #include <map>
@@ -75,9 +76,9 @@ class Server {
         std::string                 _password;
         std::vector<struct pollfd>  _pfds;
         std::map<int, Client*>      _clients;
-        std::map<std::string, Channel *> _channels;
+        std::map<std::string, Client*>  _nicks;  //nick lower
+        std::map<std::string, Channel*> _channels;  //ch name Lower lower
         Parser _parser;
-        std::map<std::string, Client*>  _nicks;
 
         Server();
         Server(const Server &other);
@@ -121,9 +122,7 @@ class Server {
         void kickClientFromChannel(Channel &, Client *);
 
         void sendError(Client *c, Error err, const std::string &arg);
-
         void sendWelcome(Client *c);
-
 };
 
 #endif

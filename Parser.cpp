@@ -148,3 +148,21 @@ Commands Parser::mapCommand(const std::string &cmd) const
     if (cmd == "HELP") return HELP;
     return NOT_FOUND;
 }
+
+char Parser::ircLower(char c) const
+{
+    if (c >= 'A' && c <= 'Z')
+        return c + 32;
+    if (c == '{') return '[';
+    if (c == '}') return ']';
+    if (c == '|') return '\\';
+    return c;
+}
+
+std::string Parser::ircLowerStr(const std::string &s) const
+{
+    std::string out = s;
+    for (size_t i = 0; i < out.size(); i++)
+        out[i] = ircLower(out[i]);
+    return out;
+} 

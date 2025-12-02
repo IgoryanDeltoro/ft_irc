@@ -226,10 +226,13 @@ void Server::clean_fd(int fd) {
     std::string def_nick = it->second->getNick().empty() ? "*_" : it->second->getNick();
     std::cout << GREEN "User " << def_nick << " leave session" RESET << std::endl;
     
-    // don't foget to remove from channels
-
     close(it->first);
+
+    if (!it->second->getNick().empty()) {
+        _nicks.erase(it->second->getNick());
+    }
     removeClientFromAllChannels(it->second);
+
     delete it->second;
     _clients.erase(it);
 
@@ -278,7 +281,10 @@ bool Server::isNickExists(const std::string &nick, Client *client)
     for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it)
     {
         Client *c = it->second;
-        if (c != client && c->getNick() == nick)
+        std::string lowerClientNick = _parser.ircLowerStr(nick);
+        std::string lowerNickToFind = _parser.ircLowerStr(c->getNick());
+
+        if (c != client && lowerNickToFind == lowerClientNick)
             return true;
     }
     return false;
@@ -328,18 +334,13 @@ void Server::nick(Client *c, const Command &command)
     }
     else
     {
+        _nicks.erase(oldNick);
+
         std::string msg = ":" + oldNick + " NICK " + newNick + "\r\n";
         std::cout << msg;
         c->setRegStatus(true);
+        // todo: to client + all in channels with client (now sendWelcome!)
         sendWelcome(c);
-
-        // Разошли клиенту, и всем в его каналах:
-        // c->enqueue_reply(msg);
-        // std::map<std::string, Channel*>::iterator it = _channels.begin();
-        // for (; it != _channels.end(); ++it) {
-        //     if (it->second->isUser(c))
-        //         it->second->broadcast(c, msg); // если реализовано
-        // }        
     }
 }
 
@@ -352,9 +353,9 @@ void Server::user(Client *c, const Command &command)
     }
     std::vector<std::string> params = command.getParams();
 
-    std::cout << "USER Command params:" << std::endl;
-    for (size_t i = 0; i < params.size(); i++)
-        std::cout << i << ": " << params[i] << std::endl;
+    // std::cout << "USER Command params:" << std::endl;
+    // for (size_t i = 0; i < params.size(); i++)
+    //     std::cout << i << ": " << params[i] << std::endl;
 
     if (params.size() < 3 || command.getText().empty())
     {
@@ -445,8 +446,6 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
             ch->setK(true, password);
         }
         _channels[name] = ch;
-        send_message_to_client(c->getFD(), ":Server NOTICE " + c->getNick() + " :Channel " + name + " created, you are operator\r\n");
-        return;
     }
     else
     {
@@ -470,47 +469,37 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
             return;
         }
 
-        const std::set<std::string> &users = ch->getUsers();
-        std::string nick = c->getNick();
-        if (users.find(nick) != users.end())
+        if (ch->isUser(c->getNick()))
         {
-            send_message_to_client(c->getFD(), ":Channel " + name + " USER already in channel\r\n");
+            // send_message_to_client(c->getFD(), ":Channel " + name + " USER already in channel\r\n");
             return;
         }
 
-        ch->addUser(nick);
+
+        ch->addUser(c);
         //:nick!user@host JOIN #channel
     }
 
+    //for all in channel
+    
+    c->enqueue_reply(":" + c->getNick() + "!" + c->getUserName() + "@" + "<host>" +" :END!\r\n");
+
+    set_event_for_sending_msg(c->getFD());
+
     // • При успешном join отправлять :
 	// • RPL_TOPIC — тема канала
+    //332 RPL_TOPIC
+        //"<channel> :<topic>"
+
 	// • RPL_NAMREPLY — список пользователей на канале
+    //353 RPL_NAMREPLY
+    // "<channel> :[[@|+]<nick> [[@|+]<nick> [...]]]"
+    //:nick!user@host JOIN #channel
 
 
-    // // --- Сообщение JOIN всем пользователям канала ---
-    // std::stringstream joinMsg;
-    // joinMsg << ":" << c->getNick() << "!~" << c->getUserName() << "@server JOIN :" << name << "\r\n";
-    // ch->broadcast(nullptr, joinMsg.str());
-
-    // // --- Отправка темы канала и списка пользователей ---
-    // if (!ch->getTopic().empty())
-    // {
-    //     send_message_to_client(c->getFD(), ":Server 332 " + c->getNick() + " " + name + " :" + ch->getTopic() + "\r\n"); // RPL_TOPIC
-    // }
-
-    // std::stringstream namesList;
-    // namesList << ":Server 353 " << c->getNick() << " = " << name << " :";
-    // for (std::set<std::string>::iterator it = ch->getUsers().begin(); it != ch->getUsers().end(); ++it)
-    // {
-    //     if (ch->isOperator(*it))
-    //         namesList << "@" << *it << " ";
-    //     else
-    //         namesList << *it << " ";
-    // }
-    // namesList << "\r\n";
-    // send_message_to_client(c->getFD(), namesList.str()); // RPL_NAMREPLY
-
-    // send_message_to_client(c->getFD(), ":Server 366 " + c->getNick() + " " + name + " :End of NAMES list\r\n"); // RPL_ENDOFNAMES
+    //Ты должен отправить список пользователей:
+    //:server 353 nick = #chan :@op1 +voiced1 user3 ...
+    //:server 366 nick #chan :End of /NAMES list.
 }
 
 void Server::mode(Client *c, const Command &command)
@@ -518,7 +507,7 @@ void Server::mode(Client *c, const Command &command)
     if (!isClientAuth(c))
         return;
     // Parameters:
-    //  <channel> {[+| -] | o | p | s | i | t | n | b | v}[<limit>][<user>] [<ban mask>] 
+    //  <channel> {[+| -] | o | p | s | i | t | n | b | v}[<limit>][<user>]
     std::vector<std::string> params = command.getParams();
     if (params.empty())
     {
@@ -608,7 +597,9 @@ void Server::mode(Client *c, const Command &command)
                     sendError(c, ERR_NEEDMOREPARAMS, "MODE " + target);
                     return;
                 }
-                ch->setL(std::stoi(args[argIndex++]));
+                int lim;
+                std::istringstream(args[argIndex++]) >> lim;
+                ch->setL(lim);
             }
             else
             {
@@ -853,7 +844,7 @@ void Server::kick(Client *c, const Command &command)
 void Server::kickClientFromChannel(Channel &channel, Client *client)
 {
     const std::string kickedNick = client->getNick();
-    std::set<std::string> &users = channel.getUsers();
+    std::map<std::string, Client*> &users = channel.getUsers();
     std::set<std::string> &operators = channel.getOperators();
     std::set<std::string> &invited = channel.getInvited();
 
@@ -1132,14 +1123,14 @@ void Server::removeClientFromAllChannels(Client *c)
         Channel *ch = it->second;
 
         ch->removeOperator(nick);
-        ch->removeUser(nick);
+        ch->removeUser(c);
         ch->removeInvite(nick);
 
         if (ch->getUsers().empty()) {
             delete ch;
-            it = _channels.erase(it);
+            _channels.erase(it);
         } else {
-            ++it;
+            it++;
         }
     }
 }
@@ -1172,25 +1163,25 @@ void Server::privmsg(Client *c, const Command &cmd) {
     (void)c;
     (void)cmd;
     //     if (cmd.getParams().empty()) {sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG"); return; };
-//     if (cmd.getParams().empty()) {sendError(c, ERR_NORECIPIENT, "PRIVMSG"); return; };
+    // if (cmd.getParams().empty()) {sendError(c, ERR_NORECIPIENT, "PRIVMSG"); return; };
 
-//     std::string R = RESET;
-//     std::stringstream ss(cmd.getParams());
-//     std::string target;
-//     while (std::getline(ss, target,',')) {
-//         if (target[0] == '#') {
-//             // send message to target in group
-//             std::map<std::string, Channel*>::iterator it = _channels.find(target);
-//             if (it == _channels.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
-//             std::string sender = (c->getNick().empty() ? "*" : c->getNick());
-//             it->second->broadcast(c, ":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
-//         } else {
-//             // send message to target
-//             std::map<std::string, Client*>::iterator it = _nicks.find(target);
-//             if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
-//             std::string sender = (c->getNick().empty() ? "*" : c->getNick());
-//             it->second->enqueue_reply(":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
-//             set_event_for_sending_msg(it->second->getFD());
-//         }
-//     }
+    // std::string R = RESET;
+    // std::stringstream ss(cmd.getParams());
+    // std::string target;
+    // while (std::getline(ss, target,',')) {
+    //     if (target[0] == '#') {
+    //         // send message to target in group
+    //         std::map<std::string, Channel*>::iterator it = _channels.find(target);
+    //         if (it == _channels.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
+    //         std::string sender = (c->getNick().empty() ? "*" : c->getNick());
+    //         it->second->broadcast(c, ":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
+    //     } else {
+    //         // send message to target
+    //         std::map<std::string, Client*>::iterator it = _nicks.find(target);
+    //         if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, c->getNick()); return; };
+    //         std::string sender = (c->getNick().empty() ? "*" : c->getNick());
+    //         it->second->enqueue_reply(":" GREEN + sender + R + " PRIVMSG " + BLUE + target + R + " :" MAGENTA + cmd.getText() + R + "\r\n");
+    //         set_event_for_sending_msg(it->second->getFD());
+    //     }
+    // }
 }
