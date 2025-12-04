@@ -1,0 +1,462 @@
+#include "../includes/Server.hpp"
+
+Server::Server(const std::string &port, const std::string &password) : _listen_fd(-1), 
+_last_timeout_check(time(NULL)), _port(port), _password(password) {
+    _listen_fd = create_and_bind();
+    if (_listen_fd < 0) throw std::runtime_error("Failed to bind listening socket");
+    if (listen(_listen_fd, BECKLOG) < 0)
+    {
+        close(_listen_fd);
+        throw std::runtime_error("listen() failed");
+    }
+
+    //make non-blocking
+    // int flags = fcntl(_listen_fd, F_GETFL, O_NONBLOCK);
+    // if (flags == -1) throw std::runtime_error("faild to make non-blocking mode");
+    if (fcntl(_listen_fd, F_SETFL, O_NONBLOCK) == -1) throw std::runtime_error("faild to make non-blocking mode");
+
+    struct pollfd p;
+    p.fd = _listen_fd;
+    p.events = POLLIN;
+    p.revents = 0;
+    _pfds.push_back(p);
+}
+
+Server::~Server() {
+    std::map<int, Client*>::iterator it = _clients.begin();
+    for (; it != _clients.end(); ++it) {
+        close(it->first);
+        delete it->second;
+    }
+    if (_listen_fd >= 0) close(_listen_fd);
+
+    for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+    {
+        delete it->second;
+    }
+}
+
+int Server::create_and_bind() {
+    struct addrinfo hints;
+    struct addrinfo *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    if (getaddrinfo(NULL, _port.c_str(), &hints, &res) != 0) {
+        std::cout << "Error: getaddrinfo" << std::endl;
+        return -1;
+    }
+
+    int server_fd = -1;
+    for (struct addrinfo *ad = res; ad != NULL; ad = ad->ai_next) {
+        server_fd = socket(ad->ai_family, ad->ai_socktype, ad->ai_protocol);
+        if (server_fd < 0) continue;
+
+        // Attach socket to the port and reconnect
+        int opt = 1;
+        setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+        // Bind
+        if (bind(server_fd, ad->ai_addr, ad->ai_addrlen) == 0) break;
+        close(server_fd);
+        server_fd = -1;
+    }
+    freeaddrinfo(res);
+    return server_fd;
+}
+
+void Server::check_timeouts() {
+    time_t nt = time(NULL);
+    std::vector<int> to_close;
+    std::map<int, Client*>::iterator it = _clients.begin();
+    for (; it != _clients.end(); ++it) {
+        if (nt - it->second->getLastActivity() > client_idle_timeout)
+            to_close.push_back(it->first);
+    }
+    for (size_t i = 0; i < to_close.size(); i++) {
+        this->close_client(to_close[i]);
+    }
+}
+
+void Server::run() {
+    std::cout << "Listening on port: " << _port << std::endl;
+
+    while (1) {
+        int ready = poll(&_pfds[0], _pfds.size(), 1000);
+        if (ready < 0) {
+            if (errno == EINTR) continue;
+            throw std::runtime_error("poll faild");
+        }
+
+        // check timeouts periodically
+        time_t nt = time(NULL);
+        if (nt - _last_timeout_check >= timeout_interval) {
+            check_timeouts();
+            _last_timeout_check = nt;
+        }
+
+        /* Deal with array returned by poll(). */
+        for (size_t j = 0; j < _pfds.size(); j++) {
+            struct pollfd p = _pfds[j]; 
+            if (p.revents == 0) continue;
+            if (p.fd == _listen_fd && (p.revents & POLLIN)) {
+                eccept_new_fd(); // rewrite below code in another function
+            } else {
+                std::map<int, Client*>::iterator it = _clients.find(p.fd); 
+                if (it == _clients.end()) continue;
+                Client *c = it->second;
+
+                if (p.revents & (POLLERR | POLLHUP | POLLNVAL)) {
+                    close_client(p.fd);
+                } else {
+                    if (p.revents & POLLIN) read_message_from(c, p.fd);
+                    if (p.revents & POLLOUT) send_msg_to(c, p.fd);
+                }
+            }
+            p.revents = 0;
+        }
+    }
+}
+
+void Server::eccept_new_fd() {
+    // Accept a connection
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+
+    while (1) {
+        int new_fd = accept(_listen_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
+        if (new_fd < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            else break;
+        }
+
+        // make non-blocking mode
+        if (fcntl(new_fd, F_SETFL, O_NONBLOCK) == -1) {
+            close(new_fd);
+            throw std::runtime_error("faild to make non-blocking mode");
+        }
+
+        _clients[new_fd] = new Client(new_fd);
+    
+        struct pollfd pa;
+        pa.fd = new_fd;
+        pa.events = POLLIN;
+        pa.revents = 0;
+        _pfds.push_back(pa);
+
+        std::cout << "Accepted fd=" << new_fd << std::endl; 
+        // _clients[new_fd]->enqueue_reply("Welcome to IRC chat.\r\n");
+        // set_event_for_sending_msg(_clients[new_fd]->getFD());
+    }
+}
+
+void Server::read_message_from(Client *c, int fd) {
+    if (!c || _clients.find(fd) == _clients.end()) return;
+
+    char buff[BUFFER] = {0};
+
+    while (1) {
+        ssize_t  bytes = recv(c->getFD(), buff, sizeof(buff), 0);
+
+        if (bytes > 0) {
+            c->getRecvBuff().append(buff, buff + bytes);
+            c->setLastActivity(time(NULL));
+            c->setCmdTimeStamps(c->getLastActivity());
+            // check incoming message for flood or hacking attack
+            while (!c->getCmdTimeStamps().empty() && c->getCmdTimeStamps().front() + flood_win < c->getLastActivity())
+                c->getCmdTimeStamps().pop_front();
+            if (static_cast<int>(c->getCmdTimeStamps().size()) > flood_max) {
+                c->enqueue_reply(":server NOTICE * :You are sending commands too fast.");
+                return;
+            }
+
+            // split lines on CRLF or LF
+            size_t pos;
+            while ((pos = c->getRecvBuff().find('\n')) != std::string::npos) {
+                std::string line = c->getRecvBuff().substr(0, pos);
+                c->getRecvBuff().erase(0, pos + 1); // erase buffer till LF ('\n')
+
+                // strip CR if present
+                // if last element CR then delete it
+                if (!line.empty() && line[line.size() - 1] == '\r') { 
+                    line.erase(line.size() - 1);
+                }
+                // handle process line
+                process_line(c, line); 
+            }
+        } else if (bytes == 0) {
+            // clean file descriptors
+            close_client(c->getFD());
+            break;
+        } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            // clean file descriptors
+            close_client(c->getFD());
+            break;
+        }
+    }
+}
+
+ssize_t Server::send_message_to_client(int fd, std::string msg) {
+    if (fd < 0) return -1;
+    return send(fd, msg.c_str(), msg.length(), 0);
+}
+
+void Server::send_msg_to(Client *c, int fd) {
+    if (!c || _clients.find(fd) == _clients.end()) return ;
+    while (!c->getMessage().empty()) {
+        std::string s = c->getMessage().front();
+        ssize_t n = send(c->getFD(), s.c_str(), s.length(), 0);
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
+            } else {
+                close_client(c->getFD());
+                return;
+            }
+        }
+        if (static_cast<size_t>(n) < s.size()) {
+            s.erase(0, n);
+            break;
+        }
+        c->getMessage().pop_front();
+    }
+    // set poll events
+    set_event_for_sending_msg(c->getFD());
+}
+
+
+// std::vector<struct pollfd>  _pfds;
+// std::map<int, Client*>      _clients;
+// std::map<std::string, Client*>  _nicks;  //nick lower
+// std::map<std::string, Channel*> _channels;  //ch name Lower lower
+
+void Server::close_client(int fd) {
+    std::map<int, Client*>::iterator it = _clients.find(fd);
+    if (it == _clients.end()) return ;
+
+    // remove from _pfds
+    for (size_t i = 0; i < _pfds.size(); ++i) {
+        if (_pfds[i].fd == fd) {
+            _pfds.erase(_pfds.begin() + i);
+            break;
+        }
+    }
+
+    std::string def_nick = it->second->getNick().empty() ? "*_" : it->second->getNick();
+    std::cout << GREEN "User " << def_nick << " leave session" RESET << std::endl;
+
+    removeClientFromAllChannels(it->second);
+
+    if (!it->second->getNick().empty()) _nicks.erase(it->second->getNick());
+
+    close(it->first);
+    delete it->second;
+    _clients.erase(it);
+}
+
+void Server::removeClientFromAllChannels(Client *c)
+{
+    std::string nick = c->getNick();
+
+    for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+        Channel *ch = it->second;
+        ch->removeOperator(nick);
+        ch->removeUser(nick);
+        ch->removeInvite(nick);
+        // if (ch->getUsers().size() == 1) {
+
+        // } else if (ch->getUsers().empty()) {
+        //     delete ch;
+        //     _channels.erase(it);
+        // }
+    }
+}
+
+void Server::sendError(Client *c, Error err, const std::string &arg)
+{
+    std::string message = getErrorText(err);
+    std::string nick = c->getNick().empty() ? "*" : c->getNick();
+
+    size_t pos;
+
+    if ((pos = message.find("<command>")) != std::string::npos)
+        message.replace(pos, 9, arg);
+    if ((pos = message.find("<nick>")) != std::string::npos)
+        message.replace(pos, 6, arg);
+    if ((pos = message.find("<channel>")) != std::string::npos)
+        message.replace(pos, 9, arg);
+
+
+    std::string s;
+    std::stringstream out1;
+    out1 << err;
+    s = out1.str();
+
+    c->enqueue_reply(RED ":server " + s + " " + nick + " " + message + RESET "\r\n");
+    set_event_for_sending_msg(c->getFD());
+}
+
+std::string Server::getErrorText(const Error &error)
+{
+    switch (error)
+    {
+    case ERR_KEYSET:
+        return "<channel> :Channel key already set";
+    case ERR_UNKNOWNMODE:
+        return "<char> :is unknown mode char to me";
+    case ERR_USERONCHANNEL:
+        return "<user> <channel> :is already on channel";
+    case ERR_USERNOTINCHANNEL:
+        return "<nick> <channel> :They aren't on that channel";
+    case ERR_CHANOPRIVSNEEDED:
+        return "<channel> :You're not channel operator";
+    case RPL_NOTOPIC:
+        return "<channel> :No topic is set";
+    case ERR_NOTONCHANNEL:
+        return "<channel> :You're not on that channel";
+    case ERR_NOTREGISTERED:
+        return ": User has not registration";
+    case ERR_BANNEDFROMCHAN:
+        return "<channel> :Cannot join channel (+b)";
+    case ERR_INVITEONLYCHAN:
+        return "<channel> :Cannot join channel (+i)";
+    case ERR_BADCHANNELKEY:
+        return "<channel> :Cannot join channel (+k)";
+    case ERR_CHANNELISFULL:
+        return "<channel> :Cannot join channel (+l)";
+    case ERR_BADCHANMASK:
+        return "";
+    case ERR_NOSUCHCHANNEL:
+        return "<channel> :No such channel";
+    case ERR_TOOMANYCHANNELS:
+        return "<channel> :You have joined too many channels";
+    case ERR_PASSALREADY:
+        return ":Password already success";
+    case ERR_NEEDPASS:
+        return ":Server PASS required ";
+    case ERR_INCORRECTPASSWORD:
+        return ":Wrong password";
+    case ERR_ALREADYREGISTRED:
+        return ":You may not reregister";
+    case ERR_NEEDMOREPARAMS:
+        return "<command> :Not enough parameters";
+    case ERR_NONICKNAMEGIVEN:
+        return ":No nickname given";
+    case ERR_ERRONEUSNICKNAME:
+        return "<nick> :Erroneus nickname";
+    case ERR_NICKNAMEINUSE:
+        return "<nick> :Nickname is already in use";
+    case ERR_NORECIPIENT:
+        return "<nick> :No recipient given (PRIVMSG)";
+    case ERR_NOTEXTTOSEND:
+        return "<nick> :No text to send";
+    case ERR_CANNOTSENDTOCHAN:
+        return "<nick> #secret :Cannot send to channel";
+    case ERR_NOTOPLEVEL:
+        return "<nick> mask :No toplevel domain specified";
+    case ERR_TOOMANYTARGETS:
+        return "<nick> a,b,c,d,e,f :Too many targets";
+    case ERR_NOSUCHNICK:
+        return "<nick> UnknownGuy :No such nick/channel";
+    case RPL_AWAY:
+        return "<your_nick> Alice :I am sleeping";
+    default:
+        return ":Error";
+    }
+}
+
+void Server::process_line(Client *c, std::string line)
+{
+    std::cout << "line: " << line << std::endl;
+    _parser.trim(line);
+    if (line.empty())
+    {
+        return;
+        // Command("", NOT_FOUND, "", ""); //???
+    }
+
+    Command cmnd = _parser.parse(line);
+
+    if (cmnd.getCommand() == NOT_FOUND) {
+        c->enqueue_reply("Command not found <" + line + ">\r\n");
+        set_event_for_sending_msg(c->getFD());
+    }
+    else if (cmnd.getCommand() == HELP) help(c);
+    else if (cmnd.getCommand() == PASS) pass(c, cmnd);
+    else if (cmnd.getCommand() == NICK) nick(c, cmnd);
+    else if (cmnd.getCommand() == USER) user(c, cmnd);
+    else if (cmnd.getCommand() == JOIN) join(c, cmnd);
+    else if (cmnd.getCommand() == MODE) mode(c, cmnd);
+    else if (cmnd.getCommand() == KICK) kick(c, cmnd);
+    else if (cmnd.getCommand() == TOPIC) topic(c, cmnd);
+    else if (cmnd.getCommand() == INVITE) invite(c, cmnd);
+    else if (cmnd.getCommand() == CAP) cap(c, cmnd);
+    else if (cmnd.getCommand() == PRIVMSG) privmsg(c, cmnd);
+    else if (cmnd.getCommand() == PING) ping(c, cmnd);
+}
+
+void Server::set_event_for_sending_msg(int fd) {
+    for (size_t i = 0; i < _pfds.size(); ++i) {
+        if (_pfds[i].fd == fd) {
+            _pfds[i].events |= POLLOUT;
+            break;
+        } 
+    }
+}
+
+void Server::sendWelcome(Client *c) {
+    std::string nick = c->getNick();
+
+    c->enqueue_reply(":server 001 " + nick + " :Welcome to server!!!!!!\r\n");
+    c->enqueue_reply(":server 002 " + nick + " :Your host is server\r\n");
+    c->enqueue_reply(":server 003 " + nick + " :This server was created today\r\n");
+    c->enqueue_reply(":server 375 " + nick + " :server Message\r\n");
+    c->enqueue_reply(":server 372 " + nick + " :Welcome!\r\n");
+    c->enqueue_reply(":server 376 " + nick + " :END!\r\n");
+
+    set_event_for_sending_msg(c->getFD());
+}
+
+Client *Server::getClientByNick(const std::string &nick)
+{
+    std::map<int, Client *>::iterator it;
+    for (it = _clients.begin(); it != _clients.end(); it++)
+    {
+        if (it->second && it->second->getNick() == nick)
+            return it->second;
+    }
+    return NULL;
+}
+
+void Server::privmsg(Client *c, const Command &cmd) {
+    if (!isClientAuth(c)) return;
+    if (cmd.getParams().empty()){sendError(c, ERR_NORECIPIENT, "PRIVMSG"); return; };
+    if (cmd.getText().empty()) {sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG"); return; };
+
+    std::vector<std::string> ch_mem = _parser.splitByComma(cmd.getParams()[0]);
+    for (size_t i = 0; i < ch_mem.size(); ++i)
+    {
+        if (ch_mem[i][0] == '#' || ch_mem[i][0] == '&') {
+            // send message to target in group
+            std::map<std::string, Channel*>::iterator channel = _channels.find(ch_mem[i]);
+            if (channel == _channels.end()) {sendError(c, ERR_NOSUCHNICK, ch_mem[i]); return; };
+            std::string sender = (c->getNick().empty() ? "*" : c->getNick());
+            // get all members from channel
+            std::map<std::string, Client*>::iterator ch_member = channel->second->getUsers().begin();
+            for (; ch_member != channel->second->getUsers().end(); ++ch_member) {
+                if (ch_member->second->getFD() == c->getFD()) continue;
+                    channel->second->broadcast(c, ":" + sender + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
+            }
+        } else {
+            // send message to target
+            std::map<std::string, Client*>::iterator it = _nicks.find(ch_mem[i]);
+            if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, ch_mem[i]); return; };
+            std::string sender = (c->getNick().empty() ? "*" : c->getNick());
+            it->second->enqueue_reply(":" + sender + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
+            set_event_for_sending_msg(it->second->getFD());
+        }
+    }
+}

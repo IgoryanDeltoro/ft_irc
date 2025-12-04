@@ -1,77 +1,23 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
-#include <iostream>
-#include <sstream>
-#include <stdlib.h>
-#include <vector>
-#include <map>
-#include <map>
+#include "Libraries.hpp"
+#include "NumericReplies.hpp"
+#include "MacroConstant.hpp"
 #include "Parser.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
 #include "Command.hpp"
-
-# define RED "\e[31m"
-# define GREEN "\e[32m"
-# define YELLOW "\e[33m"
-# define BLUE "\e[34m"
-# define MAGENTA "\e[35m"
-# define CYAN "\e[36m"
-# define WHITE "\e[37m"
-# define RESET "\e[0m"
-
-#define BECKLOG 10
-#define BUFFER 4096
 
 class Parser;
 class Client;
 class Channel;
 class Command;
 
-enum Error
-{
-    // pass
-    ERR_INCORRECTPASSWORD = 1001,
-    ERR_NEEDPASS = 1002,
-    ERR_PASSALREADY = 1003,
-    ERR_NOTREGISTERED = 1004,
-
-    RPL_NOTOPIC = 331,
-    ERR_NOSUCHCHANNEL = 403,
-    ERR_TOOMANYCHANNELS = 405,
-    ERR_NONICKNAMEGIVEN = 431,
-    ERR_ERRONEUSNICKNAME = 432,
-    ERR_NICKNAMEINUSE = 433,
-    ERR_USERNOTINCHANNEL = 441,
-    ERR_NOTONCHANNEL = 442,
-    ERR_USERONCHANNEL = 443,
-    ERR_NEEDMOREPARAMS = 461,
-    ERR_ALREADYREGISTRED = 462,
-    ERR_CHANNELISFULL = 471,
-    ERR_INVITEONLYCHAN = 473,
-    ERR_BANNEDFROMCHAN = 474,
-    ERR_BADCHANNELKEY = 475,
-    ERR_BADCHANMASK = 476,
-    ERR_CHANOPRIVSNEEDED = 482,
-
-    // IRC numeric error replies
-    ERR_NORECIPIENT = 411,
-    ERR_NOTEXTTOSEND = 412,
-    ERR_CANNOTSENDTOCHAN = 404,
-    ERR_NOTOPLEVEL = 413,
-    ERR_WILDTOPLEVEL = 414,
-    ERR_TOOMANYTARGETS = 407,
-    ERR_NOSUCHNICK = 401,
-    ERR_KEYSET = 467,
-    ERR_UNKNOWNMODE = 472,
-
-    // IRC numeric reply
-    RPL_AWAY = 301,
-};
 
 class Server {
     private:
         int                         _listen_fd;
+        int                         _last_timeout_check;
         std::string                 _port;
         std::string                 _password;
         std::vector<struct pollfd>  _pfds;
@@ -80,20 +26,25 @@ class Server {
         std::map<std::string, Channel*> _channels;  //ch name Lower lower
         Parser _parser;
 
+        static const int timeout_interval = 5; // seconds
+        static const int client_idle_timeout = 300; // seconds
+        static const int flood_win = 10; // seconds
+        static const int flood_max = 20; // max commands in window
+
         Server();
         Server(const Server &other);
         Server &operator=(const Server &other);
 
         int create_and_bind();
         void eccept_new_fd();
-        void read_message_from(Client *);
-        void send_msg_to(Client *);
+        void read_message_from(Client *, int fd);
+        void send_msg_to(Client *, int fd);
         void process_line(Client *, std::string);
-        void clean_fd(int);
+        void close_client(int);
         std::string getErrorText(const Error &error);
         ssize_t send_message_to_client(int, std::string);
         void set_event_for_sending_msg(int fd);
-
+        void check_timeouts();
         void removeClientFromAllChannels(Client *c);
 
     public:

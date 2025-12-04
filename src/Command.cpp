@@ -1,4 +1,4 @@
-#include "Command.hpp"
+#include "../includes/Command.hpp"
 
 Command::Command(): _command(NOT_FOUND) {};
 Command::~Command() {};
