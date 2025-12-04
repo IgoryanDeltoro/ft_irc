@@ -1,10 +1,9 @@
-#include "Channel.hpp"
+#include "../includes/Channel.hpp"
 
-Channel::Channel(const std::string &name, Client *client) : _name(name), _topic(""), _password(""), _userLimit(-1), _i(false), _t(false), _k(false), _l(false)
+Channel::Channel(const std::string &name, Client *c) : _name(name), _topic(""), _password(""), _userLimit(-1), _i(false), _t(false), _k(false), _l(false)
 {
-
-    addUser(client);
-    addOperator(client->getNick());
+    addUser(c);
+    addOperator(c->getNick());
 }
 Channel::~Channel() {}
 
@@ -23,13 +22,10 @@ void Channel::addInvite(const std::string &nick) { _invited.insert(nick); }
 
 void Channel::removeOperator(const std::string &nick) { _operators.erase(nick); }
 void Channel::removeInvite(const std::string &nick) { _invited.erase(nick); }
-void Channel::removeUser(Client *c)
-{
-    _users.erase(c->getNick());
-}
+void Channel::removeUser(const std::string &nick) { _users.erase(nick); }
 
 std::set<std::string> &Channel::getOperators() { return _operators; }
-std::map<std::string, Client *> &Channel::getUsers() { return _users; }
+std::map<std::string, Client*> &Channel::getUsers() { return _users; }
 std::set<std::string> &Channel::getInvited() { return _invited; }
 
 const int &Channel::getUserLimit() const { return _userLimit; }
@@ -81,13 +77,10 @@ void Channel::setL(const int &limit)
 
 void Channel::broadcast(Client *from, const std::string &msg)
 {
-    (void)from;
-    (void)msg;
+    std::map<std::string, Client*>::iterator it = _users.begin();
 
-    // std::set<std::string>::iterator it = _users.begin();
-
-    // for (; it != _users.end(); ++it) {
-    //     if (from && from->getFD() != it->second->getFD())
-    //         it->second->enqueue_reply(msg);
-    // }
+    for (; it != _users.end(); ++it) {
+        if (from && from->getFD() != it->second->getFD())
+            it->second->enqueue_reply(msg);
+    }
 }

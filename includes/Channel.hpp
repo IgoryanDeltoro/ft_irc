@@ -17,7 +17,7 @@ class Channel {
         std::string _nameLower;
         std::string _topic;
         std::string _password;
-        int _userLimit;
+        int         _userLimit;
 
         bool _i;
         bool _t;
@@ -25,11 +25,11 @@ class Channel {
         bool _l;
 
         std::set<std::string> _operators; //nick lower
-        std::map<std::string, Client *> _users; //nick lower
+        std::map<std::string, Client*> _users; //nick lower
         std::set<std::string> _invited; //nick lower
 
     public:
-        Channel(const std::string &name, Client *client);
+        Channel(const std::string &name, Client *);
         ~Channel();
 
         bool isI() const;
@@ -41,16 +41,16 @@ class Channel {
         bool isInvited(const std::string &nick) const;
 
         void addOperator(const std::string &nick);
-        void addUser(Client *c);
+        void addUser(Client*);
         void addInvite(const std::string &nick);
 
         void removeOperator(const std::string &nick);
-        void removeUser(Client *c);
+        void removeUser(const std::string &nick);
         void removeInvite(const std::string &nick);
 
         std::set<std::string> &getInvited();
         std::set<std::string> &getOperators();
-        std::map<std::string, Client *> &getUsers();
+        std::map<std::string, Client*> &getUsers();
         const int &getUserLimit() const;
 
         const std::string &getPassword() const;

@@ -2,22 +2,44 @@ NAME = ircserv
 
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD #-pedantic
-SRC = main.cpp Server.cpp Client.cpp Parser.cpp Command.cpp Channel.cpp
-BUILD = ./build
 
-OBJ = $(SRC:%.cpp=$(BUILD)/%.o)
+BUILD_DIR := ./build
+SRC_DIRS := src
+
+SRC =	$(SRC_DIRS)/main.cpp			\
+		$(SRC_DIRS)/Server.cpp			\
+		$(SRC_DIRS)/Client.cpp			\
+		$(SRC_DIRS)/Parser.cpp			\
+		$(SRC_DIRS)/Command.cpp			\
+		$(SRC_DIRS)/Channel.cpp			\
+		$(SRC_DIRS)/utils.cpp			\
+		$(SRC_DIRS)/commands/Cap.cpp	\
+		$(SRC_DIRS)/commands/Help.cpp	\
+		$(SRC_DIRS)/commands/Invite.cpp	\
+		$(SRC_DIRS)/commands/Join.cpp	\
+		$(SRC_DIRS)/commands/Kick.cpp	\
+		$(SRC_DIRS)/commands/Mode.cpp	\
+		$(SRC_DIRS)/commands/Nick.cpp	\
+		$(SRC_DIRS)/commands/Pass.cpp	\
+		$(SRC_DIRS)/commands/Ping.cpp	\
+		$(SRC_DIRS)/commands/Topic.cpp	\
+		$(SRC_DIRS)/commands/User.cpp	\
+
+
+OBJ = $(SRC:%.cpp=$(BUILD_DIR)/%.o)
 DEP = $(OBJ:.o=.d)
+
 all: $(NAME)
 
 $(NAME): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
-$(BUILD)/%.o: %.cpp
+$(BUILD_DIR)/%.o: %.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	-rm -rf $(BUILD)
+	-rm -rf $(BUILD_DIR)
 
 fclean: clean
 	-rm -f $(NAME)
