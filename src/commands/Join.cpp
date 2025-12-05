@@ -88,7 +88,7 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
     
     c->enqueue_reply(":" + c->getNick() + "!" + c->getUserName() + "@" + "<host>" +" :END!\r\n");
 
-    set_event_for_sending_msg(c->getFD());
+    set_event_for_sending_msg(c->getFD(), true);
 
     // • При успешном join отправлять :
 	// • RPL_TOPIC — тема канала

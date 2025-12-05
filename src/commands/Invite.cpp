@@ -68,5 +68,5 @@ void Server::invite(Client *c, const Command &command)
     msg << ":" << c->getNick() << " INVITE " << invitee->getNick() << " :" << ch->getName();
 
     c->enqueue_reply(msg.str() + "\r\n");
-    set_event_for_sending_msg(c->getFD());
+    set_event_for_sending_msg(c->getFD(), true);
 }

@@ -111,6 +111,7 @@ void Server::run() {
                 if (p.revents & (POLLERR | POLLHUP | POLLNVAL)) {
                     close_client(p.fd);
                 } else {
+                    std::cout << ((p.revents & POLLIN) ? "pollin" : "pollout") << std::endl;
                     if (p.revents & POLLIN) read_message_from(c, p.fd);
                     if (p.revents & POLLOUT) send_msg_to(c, p.fd);
                 }
@@ -206,6 +207,7 @@ ssize_t Server::send_message_to_client(int fd, std::string msg) {
 
 void Server::send_msg_to(Client *c, int fd) {
     if (!c || _clients.find(fd) == _clients.end()) return ;
+
     while (!c->getMessage().empty()) {
         std::string s = c->getMessage().front();
         ssize_t n = send(c->getFD(), s.c_str(), s.length(), 0);
@@ -223,15 +225,17 @@ void Server::send_msg_to(Client *c, int fd) {
         }
         c->getMessage().pop_front();
     }
-    // set poll events
-    set_event_for_sending_msg(c->getFD());
+    // // set poll events
+    // for (size_t i = 0; i < _pfds.size(); ++i) {
+    //     if (_pfds[i].fd == fd) {
+    //         _pfds[i].events = POLLIN;
+    //         if (!c->getRecvBuff().empty()) _pfds[i].events |= POLLOUT;
+    //         break;
+    //     } 
+    // }
+
+    set_event_for_sending_msg(c->getFD(), !c->getRecvBuff().empty());
 }
-
-
-// std::vector<struct pollfd>  _pfds;
-// std::map<int, Client*>      _clients;
-// std::map<std::string, Client*>  _nicks;  //nick lower
-// std::map<std::string, Channel*> _channels;  //ch name Lower lower
 
 void Server::close_client(int fd) {
     std::map<int, Client*>::iterator it = _clients.find(fd);
@@ -296,7 +300,7 @@ void Server::sendError(Client *c, Error err, const std::string &arg)
     s = out1.str();
 
     c->enqueue_reply(RED ":server " + s + " " + nick + " " + message + RESET "\r\n");
-    set_event_for_sending_msg(c->getFD());
+    set_event_for_sending_msg(c->getFD(), true);
 }
 
 std::string Server::getErrorText(const Error &error)
@@ -382,7 +386,7 @@ void Server::process_line(Client *c, std::string line)
 
     if (cmnd.getCommand() == NOT_FOUND) {
         c->enqueue_reply("Command not found <" + line + ">\r\n");
-        set_event_for_sending_msg(c->getFD());
+        set_event_for_sending_msg(c->getFD(), true);
     }
     else if (cmnd.getCommand() == HELP) help(c);
     else if (cmnd.getCommand() == PASS) pass(c, cmnd);
@@ -398,10 +402,11 @@ void Server::process_line(Client *c, std::string line)
     else if (cmnd.getCommand() == PING) ping(c, cmnd);
 }
 
-void Server::set_event_for_sending_msg(int fd) {
+void Server::set_event_for_sending_msg(int fd, bool doSend) {
     for (size_t i = 0; i < _pfds.size(); ++i) {
         if (_pfds[i].fd == fd) {
-            _pfds[i].events |= POLLOUT;
+            _pfds[i].events = POLLIN;
+            if (doSend) _pfds[i].events |= POLLOUT;
             break;
         } 
     }
@@ -417,7 +422,7 @@ void Server::sendWelcome(Client *c) {
     c->enqueue_reply(":server 372 " + nick + " :Welcome!\r\n");
     c->enqueue_reply(":server 376 " + nick + " :END!\r\n");
 
-    set_event_for_sending_msg(c->getFD());
+    set_event_for_sending_msg(c->getFD(), true);
 }
 
 Client *Server::getClientByNick(const std::string &nick)
@@ -456,7 +461,8 @@ void Server::privmsg(Client *c, const Command &cmd) {
             if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, ch_mem[i]); return; };
             std::string sender = (c->getNick().empty() ? "*" : c->getNick());
             it->second->enqueue_reply(":" + sender + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
-            set_event_for_sending_msg(it->second->getFD());
+            set_event_for_sending_msg(it->second->getFD(), true);
         }
     }
 }
+

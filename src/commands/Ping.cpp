@@ -13,5 +13,5 @@ void Server::ping(Client *c, const Command &command)
         return;
 
     c->enqueue_reply("PONG :" + arg + "\r\n");
-    set_event_for_sending_msg(c->getFD());
+    set_event_for_sending_msg(c->getFD(), true);
 }
