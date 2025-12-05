@@ -46,7 +46,8 @@ std::cout << "TOPIC Command params:" << std::endl;
         else
         {
             std::string msg = channelName + " :" + ch->getTopic() + "\r\n"; // 332 RPL_TOPIC "<channel> :<topic>"
-            send_message_to_client(c->getFD(), msg);
+            c->enqueue_reply(msg);
+            set_event_for_sending_msg(c->getFD(), true);
         }
     }
     else
@@ -60,14 +61,16 @@ std::cout << "TOPIC Command params:" << std::endl;
         {
             ch->setTopic(command.getText());
             std::string msg = ":Topic " + command.getText() + " on " + channelName + " seted\r\n";
-            send_message_to_client(c->getFD(), msg);
+            c->enqueue_reply(msg);
+            set_event_for_sending_msg(c->getFD(), true);
         }
         else
         {
             std::string old = ch->getTopic();
             ch->setTopic(command.getText());
             std::string msg = ":User " + c->getNick() + " changed topic from " + old + " to " + command.getText() + " on " + channelName + "\r\n";
-            send_message_to_client(c->getFD(), msg);
+            c->enqueue_reply(msg);
+            set_event_for_sending_msg(c->getFD(), true);
         }
     }
 }

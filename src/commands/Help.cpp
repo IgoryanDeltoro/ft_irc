@@ -19,7 +19,7 @@ void Server::help(Client *c)
     else
         c->enqueue_reply(YELLOW + join + mode + topic + list + invite + kick + privmsg + RESET "\r\n");
 
-    set_event_for_sending_msg(c->getFD());
+    set_event_for_sending_msg(c->getFD(), true);
     
     //     send_message_to_client(c->getFD(), ":" + pass + nick + user + "\r\n");
     // else

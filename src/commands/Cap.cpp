@@ -7,7 +7,7 @@ void Server::cap(Client *c, const Command &command)
     if (params[0] == "LS") 
     {
         c->enqueue_reply(":server CAP * LS :\r\n");
-        set_event_for_sending_msg(c->getFD());
+        set_event_for_sending_msg(c->getFD(), true);
         // send_message_to_client(c->getFD(), ":server CAP * END\r\n");
     }
     // else if (params[0] == "END") {}
