@@ -51,6 +51,7 @@ class Channel {
         std::set<std::string> &getInvited();
         std::set<std::string> &getOperators();
         std::map<std::string, Client*> &getUsers();
+        Client *getUser(const std::string &nick);
         const int &getUserLimit() const;
 
         const std::string &getPassword() const;

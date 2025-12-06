@@ -6,10 +6,6 @@ void Server::topic(Client *c, const Command &command)
         return;
     std::vector<std::string> params = command.getParams();
 
-std::cout << "TOPIC Command params:" << std::endl;
-    for (size_t i = 0; i < params.size(); i++)
-        std::cout << i << ": " << params[i] << std::endl;
-
     if (params.size() < 1)
     {
         sendError(c, ERR_NEEDMOREPARAMS, "TOPIC");
@@ -17,14 +13,11 @@ std::cout << "TOPIC Command params:" << std::endl;
     }
     std::string channelName = params[0];
 
-    if (channelName.empty() || channelName.size() < 2 || (channelName[0] != '#' && channelName[0] != '&'))
+    if (!_parser.isValidChannelName(channelName))
     {
-        sendError(c, ERR_NOSUCHCHANNEL, channelName);//TODO ERROR wrong arg ?
+        sendError(c, ERR_NOSUCHCHANNEL, channelName); // TODO ERROR wrong arg ?
         return;
     }
-
-    //TODO!!! check chanelName
-
     Channel *ch;
     if (_channels.count(channelName) == 0)
     {
@@ -71,6 +64,7 @@ std::cout << "TOPIC Command params:" << std::endl;
             std::string msg = ":User " + c->getNick() + " changed topic from " + old + " to " + command.getText() + " on " + channelName + "\r\n";
             c->enqueue_reply(msg);
             set_event_for_sending_msg(c->getFD(), true);
+            ch->broadcast(c, msg);
         }
     }
 }

@@ -84,3 +84,10 @@ void Channel::broadcast(Client *from, const std::string &msg)
             it->second->enqueue_reply(msg);
     }
 }
+
+Client *Channel::getUser(const std::string &nick)
+{
+    if (_users.count(nick))
+        return _users[nick];
+    return NULL;
+}

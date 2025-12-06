@@ -70,7 +70,6 @@ class Server {
         void joinChannel(Client *, const std::string &, const std::string &);
         bool isClientAuth(Client *);
         Client *getClientByNick(const std::string &nick);
-        void kickClientFromChannel(Channel &, Client *);
 
         void sendError(Client *c, Error err, const std::string &arg);
         void sendWelcome(Client *c);
