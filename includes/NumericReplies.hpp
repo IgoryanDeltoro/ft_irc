@@ -40,6 +40,7 @@ enum Error
 
     // IRC numeric reply
     RPL_AWAY = 301,
+    ERR_INPUTTOOLONG = 417,
 };
 
 #endif
