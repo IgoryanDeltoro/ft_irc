@@ -21,22 +21,23 @@ void Server::mode(Client *c, const Command &command)
         sendError(c, ERR_BADCHANMASK, target);
         return;
     }
+    std::string channelNameLower = _parser.ircLowerStr(target);
 
     Channel *ch = NULL;
 
-    if (_channels.count(target) == 0)
+    if (_channels.count(channelNameLower) == 0)
     {
         sendError(c, ERR_NOSUCHCHANNEL, target);
         return;
     }
-    ch = _channels[target];
+    ch = _channels[channelNameLower];
 
-    if (!ch->isUser(c->getNick()))
+    if (!ch->isUser(c->getNickLower()))
     {
         sendError(c, ERR_NOTONCHANNEL, target);
         return;
     }
-    if (!ch->isOperator(c->getNick()))
+    if (!ch->isOperator(c->getNickLower()))
     {
         sendError(c, ERR_CHANOPRIVSNEEDED, target);
         return;
@@ -112,16 +113,18 @@ void Server::mode(Client *c, const Command &command)
             }
             else
             {
-                Client *user = getClientByNick(args[argIndex++]);
+                std::string nick = args[argIndex++];
+                std::string nickLower = _parser.ircLowerStr(nick);
+                Client *user = getClientByNick(nickLower);
                 if (!user)
                 {
                     sendError(c, ERR_NOSUCHNICK, args[argIndex - 1]);
                     return;
                 }
                 if (adding)
-                    ch->addOperator(user->getNick());
+                    ch->addOperator(user->getNickLower());
                 else
-                    ch->removeOperator(user->getNick());
+                    ch->removeOperator(user->getNickLower());
             }
             break;
         default:

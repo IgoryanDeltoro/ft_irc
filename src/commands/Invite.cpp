@@ -8,10 +8,6 @@ void Server::invite(Client *c, const Command &command)
 // Parameters: <nickname> <channel>
 
     std::vector<std::string>  params = command.getParams();
-    // std::cout << "JOIN Command params:" << std::endl;
-    // for (size_t i = 0; i < params.size(); i++)
-    //     std::cout << i << ": " << params[i] << std::endl;
-
     if (params.size() < 2)
     {
         sendError(c, ERR_NEEDMOREPARAMS, "INVITE");
@@ -31,36 +27,41 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
 
+    std::string channelLower = _parser.ircLowerStr(channel);
     Channel *ch;
-    if (_channels.count(channel) == 0)
+    if (_channels.count(channelLower) == 0)
     {
         sendError(c, ERR_NOSUCHCHANNEL, channel);
         return;
     }
-    ch = _channels[channel];
+    ch = _channels[channelLower];
 
-    if (!ch->isUser(c->getNick()))
+    if (!ch->isUser(c->getNickLower()))
     {
         sendError(c, ERR_NOTONCHANNEL, channel);
         return;
     }
 
-    if (ch->isI() && !ch->isOperator(c->getNick())) {
+    if (ch->isI() && !ch->isOperator(c->getNickLower())) {
         sendError(c, ERR_CHANOPRIVSNEEDED, channel);
         return;
     }
+    std::string nickLower = _parser.ircLowerStr(nick);
 
-    Client *invitee = getClientByNick(nick);
+    Client *invitee = getClientByNick(nickLower);
     if (!invitee) {
         sendError(c, ERR_NOSUCHNICK, nick);
         return;
     }
-    if (ch->isUser(nick)) {
+
+    if (ch->isUser(nickLower))
+    {
         sendError(c, ERR_USERONCHANNEL, channel);//todo error user!?
         return;
     }
-    if (!ch->isInvited(nick)) {
-        ch->addInvite(nick);
+    if (!ch->isInvited(nickLower))
+    {
+        ch->addInvite(nickLower);
     }
 
     // :<inviter> INVITE <nickname> :<channel>

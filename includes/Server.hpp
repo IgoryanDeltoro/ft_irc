@@ -66,13 +66,14 @@ class Server {
         void privmsg(Client *, const Command &);
         void ping(Client *, const Command &);
 
-        bool isNickExists(const std::string &, Client *);
+        bool isNickExists(const std::string &);
         void joinChannel(Client *, const std::string &, const std::string &);
         bool isClientAuth(Client *);
         Client *getClientByNick(const std::string &nick);
 
         void sendError(Client *c, Error err, const std::string &arg);
         void sendWelcome(Client *c);
+        std::string getNamesList(Client *c, Channel *ch);
 };
 
 #endif

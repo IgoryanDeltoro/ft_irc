@@ -29,7 +29,7 @@ class Channel {
         std::set<std::string> _invited; //nick lower
 
     public:
-        Channel(const std::string &name, Client *);
+        Channel(const std::string &name, const std::string &nameLower, Client *);
         ~Channel();
 
         bool isI() const;
@@ -57,6 +57,7 @@ class Channel {
         const std::string &getPassword() const;
         const std::string &getTopic() const;
         const std::string &getName() const;
+        const std::string &getNameLower() const;
 
         void broadcast(Client *from, const std::string &msg);
 

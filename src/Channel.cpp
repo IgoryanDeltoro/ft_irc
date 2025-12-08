@@ -1,6 +1,6 @@
 #include "../includes/Channel.hpp"
 
-Channel::Channel(const std::string &name, Client *c) : _name(name), _topic(""), _password(""), _userLimit(-1), _i(false), _t(false), _k(false), _l(false)
+Channel::Channel(const std::string &name, const std::string &nameLower, Client *c) : _name(name), _nameLower(nameLower), _topic(""), _password(""), _userLimit(-1), _i(false), _t(false), _k(false), _l(false)
 {
     addUser(c);
     addOperator(c->getNick());
@@ -15,10 +15,9 @@ bool Channel::isUser(const std::string &nick) const { return _users.count(nick) 
 bool Channel::isOperator(const std::string &nick) const { return _operators.count(nick) != 0; }
 bool Channel::isInvited(const std::string &nick) const { return _invited.count(nick) != 0; }
 
-void Channel::addUser(Client *c) { _users[c->getNick()] = c; }
+void Channel::addUser(Client *c) { _users[c->getNickLower()] = c; }
 void Channel::addOperator(const std::string &nick) { _operators.insert(nick); }
 void Channel::addInvite(const std::string &nick) { _invited.insert(nick); }
-
 
 void Channel::removeOperator(const std::string &nick) { _operators.erase(nick); }
 void Channel::removeInvite(const std::string &nick) { _invited.erase(nick); }
@@ -32,6 +31,7 @@ const int &Channel::getUserLimit() const { return _userLimit; }
 const std::string &Channel::getPassword() const { return _password; }
 const std::string &Channel::getTopic() const { return _topic; }
 const std::string &Channel::getName() const { return _name; }
+const std::string &Channel::getNameLower() const { return _nameLower; }
 
 void Channel::setTopic(const std::string &topic) { _topic = topic; }
 void Channel::setPassword(const std::string &password) { _password = password; }
@@ -78,7 +78,6 @@ void Channel::setL(const int &limit)
 void Channel::broadcast(Client *from, const std::string &msg)
 {
     std::map<std::string, Client*>::iterator it = _users.begin();
-
     for (; it != _users.end(); ++it) {
         if (from && from->getFD() != it->second->getFD())
             it->second->enqueue_reply(msg);

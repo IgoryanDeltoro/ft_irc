@@ -18,15 +18,17 @@ void Server::topic(Client *c, const Command &command)
         sendError(c, ERR_NOSUCHCHANNEL, channelName); // TODO ERROR wrong arg ?
         return;
     }
+    std::string channelNameLower = _parser.ircLowerStr(channelName);
+
     Channel *ch;
-    if (_channels.count(channelName) == 0)
+    if (_channels.count(channelNameLower) == 0)
     {
         sendError(c, ERR_NOSUCHCHANNEL, channelName);
         return;
     }
-    ch = _channels[channelName];
+    ch = _channels[channelNameLower];
 
-    if (!ch->isUser(c->getNick()))
+    if (!ch->isUser(c->getNickLower()))
     {
         sendError(c, ERR_NOTONCHANNEL, channelName);
         return;
@@ -45,7 +47,7 @@ void Server::topic(Client *c, const Command &command)
     }
     else
     {
-        if (ch->isT() && !ch->isOperator(c->getNick()))
+        if (ch->isT() && !ch->isOperator(c->getNickLower()))
         {
             sendError(c, ERR_CHANOPRIVSNEEDED, channelName);
             return;

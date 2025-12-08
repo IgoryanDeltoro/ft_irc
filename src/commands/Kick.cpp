@@ -50,35 +50,39 @@ void Server::kick(Client *c, const Command &command)
             return;
         }
 
+        std::string channelNameLower = _parser.ircLowerStr(channelNames[i]);
+
         Channel *ch;
-        if (!_channels.count(channelNames[i]))
+        if (!_channels.count(channelNameLower))
         {
             sendError(c, ERR_NOSUCHCHANNEL, channelNames[i]);
             continue;
         }
-        ch = _channels[channelNames[i]];
-        if (!ch->isUser(c->getNick()))
+        ch = _channels[channelNameLower];
+        if (!ch->isUser(c->getNickLower()))
         {
             sendError(c, ERR_NOTONCHANNEL, channelNames[i]);
             return;
         }
-        if (!ch->getOperators().count(c->getNick()))
+        if (!ch->getOperators().count(c->getNickLower()))
         {
             sendError(c, ERR_CHANOPRIVSNEEDED, channelNames[i]);
             return;
         }
         
         // проверяем ник в канале
-        Client *userToKick = ch->getUser(namesToKick[i]);
+        std::string nameToKickLower = _parser.ircLowerStr(namesToKick[i]);
+
+        Client *userToKick = ch->getUser(nameToKickLower);
         if (!userToKick)
         {
             sendError(c, ERR_USERNOTINCHANNEL, namesToKick[i]);
             return;
         }
 
-        ch->removeInvite(namesToKick[i]);
-        ch->removeOperator(namesToKick[i]);
-        ch->removeUser(namesToKick[i]);
+        ch->removeInvite(nameToKickLower);
+        ch->removeOperator(nameToKickLower);
+        ch->removeUser(nameToKickLower);
 
         std::string outMessage = ":" + c->getNick() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
 

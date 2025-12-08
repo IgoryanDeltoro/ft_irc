@@ -139,15 +139,18 @@ void Server::eccept_new_fd() {
             throw std::runtime_error("faild to make non-blocking mode");
         }
 
-        _clients[new_fd] = new Client(new_fd);
-    
+        char ipStr[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(address.sin_addr), ipStr, INET_ADDRSTRLEN);
+
+        _clients[new_fd] = new Client(new_fd, std::string(ipStr));
+
         struct pollfd pa;
         pa.fd = new_fd;
         pa.events = POLLIN;
         pa.revents = 0;
         _pfds.push_back(pa);
 
-        std::cout << "Accepted fd=" << new_fd << std::endl; 
+        std::cout << "Accepted fd=" << new_fd << ", host=" << std::string(ipStr) << std::endl;
         // _clients[new_fd]->enqueue_reply("Welcome to IRC chat.\r\n");
         // set_event_for_sending_msg(_clients[new_fd]->getFD());
     }
@@ -254,7 +257,7 @@ void Server::close_client(int fd) {
 
     removeClientFromAllChannels(it->second);
 
-    if (!it->second->getNick().empty()) _nicks.erase(it->second->getNick());
+    if (!it->second->getNick().empty()) _nicks.erase(it->second->getNickLower());
 
     close(it->first);
     delete it->second;
@@ -263,7 +266,7 @@ void Server::close_client(int fd) {
 
 void Server::removeClientFromAllChannels(Client *c)
 {
-    std::string nick = c->getNick();
+    std::string nick = c->getNickLower();
 
     for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
         Channel *ch = it->second;
@@ -415,13 +418,12 @@ void Server::set_event_for_sending_msg(int fd, bool doSend) {
 void Server::sendWelcome(Client *c) {
     std::string nick = c->getNick();
 
-    c->enqueue_reply(":server 001 " + nick + " :Welcome to server!!!!!!\r\n");
+    c->enqueue_reply(":server 001 " + nick + " :Welcome to IRC server!\r\n");
     c->enqueue_reply(":server 002 " + nick + " :Your host is server\r\n");
     c->enqueue_reply(":server 003 " + nick + " :This server was created today\r\n");
-    c->enqueue_reply(":server 375 " + nick + " :server Message\r\n");
-    c->enqueue_reply(":server 372 " + nick + " :Welcome!\r\n");
-    c->enqueue_reply(":server 376 " + nick + " :END!\r\n");
-
+    c->enqueue_reply(":server 375 " + nick + " :- server Message of the day -\r\n");
+    c->enqueue_reply(":server 372 " + nick + " :- Welcome!\r\n");
+    c->enqueue_reply(":server 376 " + nick + " :End of /MOTD command\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }
 
@@ -430,7 +432,7 @@ Client *Server::getClientByNick(const std::string &nick)
     std::map<int, Client *>::iterator it;
     for (it = _clients.begin(); it != _clients.end(); it++)
     {
-        if (it->second && it->second->getNick() == nick)
+        if (it->second && it->second->getNickLower() == nick)
             return it->second;
     }
     return NULL;
