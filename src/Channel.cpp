@@ -90,3 +90,29 @@ Client *Channel::getUser(const std::string &nick)
         return _users[nick];
     return NULL;
 }
+
+std::string Channel::getAllModesString() const
+{
+    std::string mode = "+";
+    if (_i) mode += "i";
+    if (_t) mode += "t";
+    if (_k) mode += "k";
+    if (_l) mode += "l";
+
+    std::string args;
+    if (_k) args += " " + _password;
+    if (_l) {
+        std::stringstream ss;
+        ss << _userLimit;
+        args += " " + ss.str();
+    }
+
+    // for (std::map<std::string, Client *>::const_iterator it = _users.begin(); it != _users.end(); ++it)
+    // {
+    //     Client *clien = it->second;
+    //     if (isOperator(clien->getNickLower()))
+    //         args += " " + clien->getNick();
+    // }
+
+    return mode; //+ args;
+}

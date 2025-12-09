@@ -71,7 +71,7 @@ class Server {
         bool isClientAuth(Client *);
         Client *getClientByNick(const std::string &nick);
 
-        void sendError(Client *c, Error err, const std::string &arg);
+        void sendError(Client *c, Error err, const std::string &arg, const std::string &channel);
         void sendWelcome(Client *c);
         std::string getNamesList(Client *c, Channel *ch);
 };

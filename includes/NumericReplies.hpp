@@ -38,8 +38,6 @@ enum Error
     ERR_KEYSET = 467,
     ERR_UNKNOWNMODE = 472,
 
-    // IRC numeric reply
-    RPL_AWAY = 301,
 };
 
 #endif

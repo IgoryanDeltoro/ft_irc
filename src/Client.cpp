@@ -49,3 +49,8 @@ void Client::setLastActivity(const time_t &t) { _last_activity = t; };
 bool Client::operator!=(const Client &c) const { return _fd != c._fd; }
 
 const std::string &Client::getHost() const { return _host;}
+
+std::string Client::buildPrefix() const
+{
+    return ":" + _nick + "!" + _userName + "@" + _host;
+}

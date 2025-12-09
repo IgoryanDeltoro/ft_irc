@@ -3,6 +3,7 @@
 #include <iostream>
 #include <set>
 #include <map>
+#include <sstream>
 #include "Client.hpp"
 
 class Client;
@@ -67,6 +68,8 @@ class Channel {
         void setI(const bool &i);
         void setT(const bool &t);
         void setL(const int &limit);
+
+        std::string getAllModesString() const;
 };
 
 #endif

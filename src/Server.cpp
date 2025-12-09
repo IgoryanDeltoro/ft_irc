@@ -282,7 +282,7 @@ void Server::removeClientFromAllChannels(Client *c)
     }
 }
 
-void Server::sendError(Client *c, Error err, const std::string &arg)
+void Server::sendError(Client *c, Error err, const std::string &arg, const std::string &channel)
 {
     std::string message = getErrorText(err);
     std::string nick = c->getNick().empty() ? "*" : c->getNick();
@@ -291,11 +291,19 @@ void Server::sendError(Client *c, Error err, const std::string &arg)
 
     if ((pos = message.find("<command>")) != std::string::npos)
         message.replace(pos, 9, arg);
-    if ((pos = message.find("<nick>")) != std::string::npos)
+    else if ((pos = message.find("<nick>")) != std::string::npos)
         message.replace(pos, 6, arg);
-    if ((pos = message.find("<channel>")) != std::string::npos)
-        message.replace(pos, 9, arg);
+    else if((pos = message.find("<char>")) != std::string::npos)
+        message.replace(pos, 6, arg);
+    else if((pos = message.find("<user>")) != std::string::npos)
+        message.replace(pos, 6, arg);
+    else if ((pos = message.find("<target>")) != std::string::npos)
+        message.replace(pos, 8, arg);
+    else if ((pos = message.find("<mask>")) != std::string::npos)
+        message.replace(pos, 6, arg);
 
+    if((pos = message.find("<channel>")) != std::string::npos)
+        message.replace(pos, 9, channel);
 
     std::string s;
     std::stringstream out1;
@@ -335,7 +343,7 @@ std::string Server::getErrorText(const Error &error)
     case ERR_CHANNELISFULL:
         return "<channel> :Cannot join channel (+l)";
     case ERR_BADCHANMASK:
-        return "";
+        return "<channel> :Invalid channel name";
     case ERR_NOSUCHCHANNEL:
         return "<channel> :No such channel";
     case ERR_TOOMANYCHANNELS:
@@ -361,15 +369,13 @@ std::string Server::getErrorText(const Error &error)
     case ERR_NOTEXTTOSEND:
         return "<nick> :No text to send";
     case ERR_CANNOTSENDTOCHAN:
-        return "<nick> #secret :Cannot send to channel";
+        return "<channel> :Cannot send to channel";
     case ERR_NOTOPLEVEL:
-        return "<nick> mask :No toplevel domain specified";
+        return "<mask> :No toplevel domain specified"; // Если клиент отправляет PRIVMSG на некорректный канал/хост.
     case ERR_TOOMANYTARGETS:
-        return "<nick> a,b,c,d,e,f :Too many targets";
+        return "<target> :Duplicate recipients. No message delivered"; //<target> — это первый из дублирующихся или превышающих лимит получателей.
     case ERR_NOSUCHNICK:
-        return "<nick> UnknownGuy :No such nick/channel";
-    case RPL_AWAY:
-        return "<your_nick> Alice :I am sleeping";
+        return "<nick> :No such nick/channel";
     default:
         return ":Error";
     }
@@ -415,7 +421,8 @@ void Server::set_event_for_sending_msg(int fd, bool doSend) {
     }
 }
 
-void Server::sendWelcome(Client *c) {
+void Server::sendWelcome(Client *c)
+{
     std::string nick = c->getNick();
 
     c->enqueue_reply(":server 001 " + nick + " :Welcome to IRC server!\r\n");
@@ -440,8 +447,11 @@ Client *Server::getClientByNick(const std::string &nick)
 
 void Server::privmsg(Client *c, const Command &cmd) {
     if (!isClientAuth(c)) return;
-    if (cmd.getParams().empty()){sendError(c, ERR_NORECIPIENT, "PRIVMSG"); return; };
-    if (cmd.getText().empty()) {sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG"); return; };
+    if (cmd.getParams().empty()){sendError(c, ERR_NORECIPIENT, "PRIVMSG", ""); return; };
+    if (cmd.getText().empty()) {
+        sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG", "");
+        return;
+    };
 
     std::vector<std::string> ch_mem = _parser.splitByComma(cmd.getParams()[0]);
     for (size_t i = 0; i < ch_mem.size(); ++i)
@@ -449,7 +459,10 @@ void Server::privmsg(Client *c, const Command &cmd) {
         if (ch_mem[i][0] == '#' || ch_mem[i][0] == '&') {
             // send message to target in group
             std::map<std::string, Channel*>::iterator channel = _channels.find(ch_mem[i]);
-            if (channel == _channels.end()) {sendError(c, ERR_NOSUCHNICK, ch_mem[i]); return; };
+            if (channel == _channels.end()) {
+                sendError(c, ERR_NOSUCHNICK, "", ch_mem[i]);
+                return;
+            };
             std::string sender = (c->getNick().empty() ? "*" : c->getNick());
             // get all members from channel
             std::map<std::string, Client*>::iterator ch_member = channel->second->getUsers().begin();
@@ -460,7 +473,10 @@ void Server::privmsg(Client *c, const Command &cmd) {
         } else {
             // send message to target
             std::map<std::string, Client*>::iterator it = _nicks.find(ch_mem[i]);
-            if (it == _nicks.end()) {sendError(c, ERR_NOSUCHNICK, ch_mem[i]); return; };
+            if (it == _nicks.end()) {
+                sendError(c, ERR_NOSUCHNICK, ch_mem[i], "");
+                return;
+            };
             std::string sender = (c->getNick().empty() ? "*" : c->getNick());
             it->second->enqueue_reply(":" + sender + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
             set_event_for_sending_msg(it->second->getFD(), true);

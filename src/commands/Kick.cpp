@@ -22,51 +22,53 @@ void Server::kick(Client *c, const Command &command)
  
     if (params.size() < 2)
     {
-        sendError(c, ERR_NEEDMOREPARAMS, "KICK");
+        sendError(c, ERR_NEEDMOREPARAMS, "KICK", "");
         return;
     }
 
-    std::vector<std::string> channelNames = _parser.splitByComma(params[0]);
-    std::vector<std::string> namesToKick = _parser.splitByComma(params[1]);
+    std::string channelNamesRaw = params[0];
+    _parser.trim(channelNamesRaw);
+    std::string namesToKickRaw = params[1];
+    _parser.trim(namesToKickRaw);
 
-    // для каждого channel
+    std::vector<std::string> channelNames = _parser.splitByComma(channelNamesRaw);
+    std::vector<std::string> namesToKick = _parser.splitByComma(namesToKickRaw);
+
     for (size_t i = 0; i < channelNames.size(); i++)
     {
         if (!_parser.isValidChannelName(channelNames[i]) )
         {
-            sendError(c, ERR_BADCHANMASK, channelNames[i]);
+            sendError(c, ERR_BADCHANMASK, "", channelNames[i]);
             continue;
         }
-
         if (i >= namesToKick.size())
         {
-            sendError(c, ERR_NEEDMOREPARAMS, "KICK");
+            sendError(c, ERR_NEEDMOREPARAMS, "KICK", "");
             continue;
         }
 
         if (_parser.isValidNick(namesToKick[i]))
         {
-            sendError(c, ERR_NOSUCHNICK, namesToKick[i]);
+            sendError(c, ERR_NOSUCHNICK, namesToKick[i], "");
             return;
         }
 
         std::string channelNameLower = _parser.ircLowerStr(channelNames[i]);
-
         Channel *ch;
         if (!_channels.count(channelNameLower))
         {
-            sendError(c, ERR_NOSUCHCHANNEL, channelNames[i]);
+            sendError(c, ERR_NOSUCHCHANNEL, "", channelNames[i]);
             continue;
         }
         ch = _channels[channelNameLower];
         if (!ch->isUser(c->getNickLower()))
         {
-            sendError(c, ERR_NOTONCHANNEL, channelNames[i]);
+            sendError(c, ERR_NOTONCHANNEL, "", channelNames[i]);
             return;
         }
         if (!ch->getOperators().count(c->getNickLower()))
         {
-            sendError(c, ERR_CHANOPRIVSNEEDED, channelNames[i]);
+            sendError(c, ERR_CHANOPRIVSNEEDED, "", channelNames[i]);
             return;
         }
         
@@ -76,7 +78,7 @@ void Server::kick(Client *c, const Command &command)
         Client *userToKick = ch->getUser(nameToKickLower);
         if (!userToKick)
         {
-            sendError(c, ERR_USERNOTINCHANNEL, namesToKick[i]);
+            sendError(c, ERR_USERNOTINCHANNEL, namesToKick[i], channelNames[i]);
             return;
         }
 

@@ -51,7 +51,7 @@ class Client {
         void enqueue_reply(const std::string &msg);
         void setCmdTimeStamps(const time_t &);
         void setLastActivity(const time_t &);
-
+        std::string buildPrefix() const;
 };
 
 #endif

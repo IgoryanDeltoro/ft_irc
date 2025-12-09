@@ -10,7 +10,7 @@ void Server::join(Client *c, const Command &command)
     std::vector<std::string> params = command.getParams();
     if (params.empty())
     {
-        sendError(c, ERR_NEEDMOREPARAMS, "JOIN");
+        sendError(c, ERR_NEEDMOREPARAMS, "JOIN", "");
         return;
     }
 
@@ -33,7 +33,7 @@ void Server::join(Client *c, const Command &command)
 
         if (!_parser.isValidChannelName(channelName))
         {
-            sendError(c, ERR_BADCHANMASK, channelName);
+            sendError(c, ERR_BADCHANMASK, "", channelName);
             continue;
         }
         joinChannel(c, channelName, key);
@@ -55,19 +55,19 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
         ch = _channels[lower];
 
         if (ch->isI() && !ch->isInvited(c->getNickLower())) {
-            sendError(c, ERR_INVITEONLYCHAN, name);
+            sendError(c, ERR_INVITEONLYCHAN, "", name);
             return;
         }
 
         if (ch->isK() && ch->getPassword() != password) {
-            sendError(c, ERR_BADCHANNELKEY, name);
+            sendError(c, ERR_BADCHANNELKEY, "", name);
             return;
         }
 
         // +l (user limit)
         if (ch->isL() && ch->getUserLimit() > 0 && (int)ch->getUsers().size() >= ch->getUserLimit())
         {
-            sendError(c, ERR_CHANNELISFULL, name);
+            sendError(c, ERR_CHANNELISFULL, "", name);
             return;
         }
 
