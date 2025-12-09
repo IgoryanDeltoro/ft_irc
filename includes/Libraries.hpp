@@ -18,5 +18,6 @@
 # include <algorithm>
 # include <stdio.h>
 # include <string>
+# include <signal.h>
 
 #endif
