@@ -27,10 +27,10 @@ class Client {
 
         // getters
         int                     getFD() const;
-        const std::string &getHost() const;
         int                     getLastActivity() const;
         const std::string       &getNick() const;
-        const std::string &getNickLower() const;
+        const std::string       &getHost() const;
+        const std::string       &getNickLower() const;
         const std::string       &getUserName() const;
         const std::string       &getRealName() const;
         std::deque<time_t>      &getCmdTimeStamps();
