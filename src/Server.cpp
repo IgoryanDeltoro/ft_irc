@@ -111,7 +111,7 @@ void Server::run() {
                 if (p.revents & (POLLERR | POLLHUP | POLLNVAL)) {
                     close_client(p.fd);
                 } else {
-                    std::cout << ((p.revents & POLLIN) ? "pollin" : "pollout") << std::endl;
+                    // std::cout << ((p.revents & POLLIN) ? "pollin" : "pollout") << std::endl;
                     if (p.revents & POLLIN) read_message_from(c, p.fd);
                     if (p.revents & POLLOUT) send_msg_to(c, p.fd);
                 }
@@ -159,60 +159,68 @@ void Server::eccept_new_fd() {
 void Server::read_message_from(Client *c, int fd) {
     if (!c || _clients.find(fd) == _clients.end()) return;
 
-    char buff[BUFFER] = {0};
+    char buff[BUFFER];
 
     while (1) {
-        ssize_t  bytes = recv(c->getFD(), buff, sizeof(buff), 0);
+        ssize_t bytes = recv(fd, buff, sizeof(buff), 0);
 
         if (bytes > 0) {
-            c->getRecvBuff().append(buff, buff + bytes);
-            c->setLastActivity(time(NULL));
-            c->setCmdTimeStamps(c->getLastActivity());
-            // check incoming message for flood or hacking attack
-            while (!c->getCmdTimeStamps().empty() && c->getCmdTimeStamps().front() + flood_win < c->getLastActivity())
-                c->getCmdTimeStamps().pop_front();
-            if (static_cast<int>(c->getCmdTimeStamps().size()) > flood_max) {
-                c->enqueue_reply(":server NOTICE * :You are sending commands too fast.");
+            c->getRecvBuff().append(buff, bytes);
+
+            // Reject too long line (DoS protection)
+            if (c->getRecvBuff().size() > 512) {
+                std::string s = RED ":server NOTICE * :Input buffer too long" RESET "\r\n";
+                send(fd, s.c_str(), s.length(), 0);
+                close_client(fd);
                 return;
             }
 
-            // split lines on CRLF or LF
-            size_t pos;
-            while ((pos = c->getRecvBuff().find('\n')) != std::string::npos) {
-                std::string line = c->getRecvBuff().substr(0, pos);
-                c->getRecvBuff().erase(0, pos + 1); // erase buffer till LF ('\n')
+            time_t now = time(NULL);
+            c->setLastActivity(now);
 
-                // strip CR if present
-                // if last element CR then delete it
-                if (!line.empty() && line[line.size() - 1] == '\r') { 
-                    line.erase(line.size() - 1);
+            // Parse full CRLF lines
+            size_t pos;
+            while ((pos = c->getRecvBuff().find("\r\n")) != std::string::npos) {
+
+                std::string line = c->getRecvBuff().substr(0, pos);
+                c->getRecvBuff().erase(0, pos + 2); // remove CRLF
+
+                // flood protection per command
+                c->setCmdTimeStamps(now);
+                while (!c->getCmdTimeStamps().empty() &&
+                       c->getCmdTimeStamps().front() + flood_win < now)
+                    c->getCmdTimeStamps().pop_front();
+
+                if ((int)c->getCmdTimeStamps().size() > flood_max) {
+                    std::string s = RED ":server NOTICE * :Flooding detected" RESET "\r\n";
+                    send(fd, s.c_str(), s.length(), 0);
+                    close_client(fd);
+                    return;
                 }
-                // handle process line
-                process_line(c, line); 
+                // Process the line
+                process_line(c, line);
             }
-        } else if (bytes == 0) {
-            // clean file descriptors
-            close_client(c->getFD());
+        }
+        else if (bytes == 0) {
+            close_client(fd);
             break;
-        } else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
-            // clean file descriptors
-            close_client(c->getFD());
+        }
+        else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
+            close_client(fd);
             break;
         }
     }
 }
 
-ssize_t Server::send_message_to_client(int fd, std::string msg) {
-    if (fd < 0) return -1;
-    return send(fd, msg.c_str(), msg.length(), 0);
-}
+
 
 void Server::send_msg_to(Client *c, int fd) {
     if (!c || _clients.find(fd) == _clients.end()) return ;
 
     while (!c->getMessage().empty()) {
-        std::string s = c->getMessage().front();
+        std::string &s = c->getMessage().front();
         ssize_t n = send(c->getFD(), s.c_str(), s.length(), 0);
         if (n < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -228,15 +236,6 @@ void Server::send_msg_to(Client *c, int fd) {
         }
         c->getMessage().pop_front();
     }
-    // // set poll events
-    // for (size_t i = 0; i < _pfds.size(); ++i) {
-    //     if (_pfds[i].fd == fd) {
-    //         _pfds[i].events = POLLIN;
-    //         if (!c->getRecvBuff().empty()) _pfds[i].events |= POLLOUT;
-    //         break;
-    //     } 
-    // }
-
     set_event_for_sending_msg(c->getFD(), !c->getRecvBuff().empty());
 }
 
@@ -411,15 +410,6 @@ void Server::process_line(Client *c, std::string line)
     else if (cmnd.getCommand() == PING) ping(c, cmnd);
 }
 
-void Server::set_event_for_sending_msg(int fd, bool doSend) {
-    for (size_t i = 0; i < _pfds.size(); ++i) {
-        if (_pfds[i].fd == fd) {
-            _pfds[i].events = POLLIN;
-            if (doSend) _pfds[i].events |= POLLOUT;
-            break;
-        } 
-    }
-}
 
 void Server::sendWelcome(Client *c)
 {
@@ -445,40 +435,72 @@ Client *Server::getClientByNick(const std::string &nick)
     return NULL;
 }
 
+void Server::set_event_for_sending_msg(int fd, bool doSend) {
+    for (size_t i = 0; i < _pfds.size(); ++i) {
+        if (_pfds[i].fd == fd) {
+            _pfds[i].events = POLLIN;
+            if (doSend) _pfds[i].events |= POLLOUT;
+            break;
+        } 
+    }
+}
+
+void Server::set_event_for_group_members(Channel *ch, bool doSend) {
+    std::map<std::string, Client*>::iterator member = ch->getUsers().begin();
+    for (; member != ch->getUsers().end(); ++member) {
+        for (size_t i = 0; i < _pfds.size(); i++) {
+            if (_pfds[i].fd == member->second->getFD()) {
+                _pfds[i].events = POLLIN;
+                if (doSend) _pfds[i].events |= POLLOUT;
+                break;
+            }
+        } 
+    }
+}
+
 void Server::privmsg(Client *c, const Command &cmd) {
     if (!isClientAuth(c)) return;
+
     if (cmd.getParams().empty()){sendError(c, ERR_NORECIPIENT, "PRIVMSG", ""); return; };
+
     if (cmd.getText().empty()) {
         sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG", "");
         return;
     };
 
-    std::vector<std::string> ch_mem = _parser.splitByComma(cmd.getParams()[0]);
+    std::string arg1 = cmd.getParams()[0];
+    _parser.trim(arg1);
+    
+    std::vector<std::string> ch_mem = _parser.splitByComma(arg1);
+
     for (size_t i = 0; i < ch_mem.size(); ++i)
     {
-        if (ch_mem[i][0] == '#' || ch_mem[i][0] == '&') {
+        std::string lower = _parser.ircLowerStr(ch_mem[i]);
+
+        if (lower[0] == '#' || lower[0] == '&') {
             // send message to target in group
-            std::map<std::string, Channel*>::iterator channel = _channels.find(ch_mem[i]);
+
+            
+
+            std::map<std::string, Channel*>::iterator channel = _channels.find(lower);
             if (channel == _channels.end()) {
                 sendError(c, ERR_NOSUCHNICK, "", ch_mem[i]);
                 return;
             };
-            std::string sender = (c->getNick().empty() ? "*" : c->getNick());
-            // get all members from channel
-            std::map<std::string, Client*>::iterator ch_member = channel->second->getUsers().begin();
-            for (; ch_member != channel->second->getUsers().end(); ++ch_member) {
-                if (ch_member->second->getFD() == c->getFD()) continue;
-                    channel->second->broadcast(c, ":" + sender + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
-            }
+            
+            channel->second->broadcast(c, ":" + c->getNick() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
+            set_event_for_group_members(channel->second, true);
+
         } else {
+
+
             // send message to target
-            std::map<std::string, Client*>::iterator it = _nicks.find(ch_mem[i]);
+            std::map<std::string, Client*>::iterator it = _nicks.find(lower);
             if (it == _nicks.end()) {
                 sendError(c, ERR_NOSUCHNICK, ch_mem[i], "");
                 return;
             };
-            std::string sender = (c->getNick().empty() ? "*" : c->getNick());
-            it->second->enqueue_reply(":" + sender + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
+            it->second->enqueue_reply(":" + c->getNick() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
             set_event_for_sending_msg(it->second->getFD(), true);
         }
     }

@@ -37,7 +37,6 @@ enum Error
     ERR_NOSUCHNICK = 401,
     ERR_KEYSET = 467,
     ERR_UNKNOWNMODE = 472,
-
 };
 
 #endif

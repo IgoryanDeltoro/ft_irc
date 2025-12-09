@@ -4,6 +4,7 @@
 #include <set>
 #include <map>
 #include <sstream>
+#include <vector>
 #include "Client.hpp"
 
 class Client;
@@ -60,7 +61,7 @@ class Channel {
         const std::string &getName() const;
         const std::string &getNameLower() const;
 
-        void broadcast(Client *from, const std::string &msg);
+        void broadcast(Client *, const std::string &);
 
         void setTopic(const std::string &topic);
         void setPassword(const std::string &password);

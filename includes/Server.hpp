@@ -28,7 +28,7 @@ class Server {
 
         static const int timeout_interval = 5; // seconds
         static const int client_idle_timeout = 300; // seconds
-        static const int flood_win = 10; // seconds
+        static const int flood_win = 10; // range between incomin meseges in seconds 
         static const int flood_max = 20; // max commands in window
 
         Server();
@@ -42,7 +42,8 @@ class Server {
         void process_line(Client *, std::string);
         void close_client(int);
         std::string getErrorText(const Error &error);
-        ssize_t send_message_to_client(int, std::string);
+        // ssize_t send_message_to_client(int, std::string);
+        void set_event_for_group_members(Channel *ch, bool doSend);
         void set_event_for_sending_msg(int fd, bool);
         void check_timeouts();
         void removeClientFromAllChannels(Client *c);

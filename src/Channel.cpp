@@ -79,8 +79,8 @@ void Channel::broadcast(Client *from, const std::string &msg)
 {
     std::map<std::string, Client*>::iterator it = _users.begin();
     for (; it != _users.end(); ++it) {
-        if (from && from->getFD() != it->second->getFD())
-            it->second->enqueue_reply(msg);
+        if (from && from->getFD() == it->second->getFD()) continue;
+        it->second->enqueue_reply(msg);
     }
 }
 
