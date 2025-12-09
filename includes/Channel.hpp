@@ -3,6 +3,7 @@
 #include <iostream>
 #include <set>
 #include <map>
+#include <sstream>
 #include <vector>
 #include "Client.hpp"
 
@@ -30,7 +31,7 @@ class Channel {
         std::set<std::string> _invited; //nick lower
 
     public:
-        Channel(const std::string &name, Client *);
+        Channel(const std::string &name, const std::string &nameLower, Client *);
         ~Channel();
 
         bool isI() const;
@@ -52,11 +53,13 @@ class Channel {
         std::set<std::string> &getInvited();
         std::set<std::string> &getOperators();
         std::map<std::string, Client*> &getUsers();
+        Client *getUser(const std::string &nick);
         const int &getUserLimit() const;
 
         const std::string &getPassword() const;
         const std::string &getTopic() const;
         const std::string &getName() const;
+        const std::string &getNameLower() const;
 
         void broadcast(Client *, const std::string &);
 
@@ -66,6 +69,8 @@ class Channel {
         void setI(const bool &i);
         void setT(const bool &t);
         void setL(const int &limit);
+
+        std::string getAllModesString() const;
 };
 
 #endif

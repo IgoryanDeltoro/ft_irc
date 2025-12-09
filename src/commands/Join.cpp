@@ -10,98 +10,107 @@ void Server::join(Client *c, const Command &command)
     std::vector<std::string> params = command.getParams();
     if (params.empty())
     {
-        sendError(c, ERR_NEEDMOREPARAMS, "JOIN");
+        sendError(c, ERR_NEEDMOREPARAMS, "JOIN", "");
         return;
     }
 
-    std::vector<std::string> channelNames = _parser.splitByComma(params[0]);
+    std::string channelsRaw = params[0];
+    _parser.trim(channelsRaw);
+    std::vector<std::string> channelNames = _parser.splitByComma(channelsRaw);
     std::vector<std::string> keys;
 
     if (params.size() > 1)
     {
-        _parser.trim(params[1]);
-        keys = _parser.splitByComma(params[1]);
+        std::string keysRaw = params[1];
+        _parser.trim(keysRaw);
+        keys = _parser.splitByComma(keysRaw);
     }
 
     for (size_t i = 0; i < channelNames.size(); i++)
     {
-        std::string chan = channelNames[i];
+        std::string channelName = channelNames[i];
         std::string key = (i < keys.size() ? keys[i] : "");
 
-        if (!_parser.isValidChannelName(chan))
+        if (!_parser.isValidChannelName(channelName))
         {
-            sendError(c, ERR_BADCHANMASK, chan);
+            sendError(c, ERR_BADCHANMASK, "", channelName);
             continue;
         }
-
-        joinChannel(c, chan, key);
+        joinChannel(c, channelName, key);
     }
 }
 
 void Server::joinChannel(Client *c, const std::string &name, const std::string &password)
 {
-    Channel *ch;
-
-    if (_channels.count(name) == 0)
-    {
-        ch = new Channel(name, c);
-        if (!password.empty())
-        {
+    std::string lower = _parser.ircLowerStr(name);
+    Channel *ch = NULL;
+    if (_channels.count(lower) == 0) {
+        ch = new Channel(name, lower, c);
+        if (!password.empty()) {
             ch->setK(true, password);
         }
-        _channels[name] = ch;
+        _channels[lower] = ch;
     }
-    else
-    {
-        ch = _channels[name];
+    else {
+        ch = _channels[lower];
 
-        if (ch->isI() && !ch->isOperator(c->getNick()))
-        {
-            sendError(c, ERR_INVITEONLYCHAN, name);
+        if (ch->isI() && !ch->isInvited(c->getNickLower())) {
+            sendError(c, ERR_INVITEONLYCHAN, "", name);
             return;
         }
-        if (!ch->getPassword().empty() && ch->getPassword() != password)
-        {
-            sendError(c, ERR_BADCHANNELKEY, name);
+
+        if (ch->isK() && ch->getPassword() != password) {
+            sendError(c, ERR_BADCHANNELKEY, "", name);
             return;
         }
 
         // +l (user limit)
-        if (ch->getUserLimit() > 0 && (int)ch->getUsers().size() >= ch->getUserLimit())
+        if (ch->isL() && ch->getUserLimit() > 0 && (int)ch->getUsers().size() >= ch->getUserLimit())
         {
-            sendError(c, ERR_CHANNELISFULL, name);
+            sendError(c, ERR_CHANNELISFULL, "", name);
             return;
         }
 
-        if (ch->isUser(c->getNick()))
+        if (ch->isUser(c->getNickLower()))
         {
             // send_message_to_client(c->getFD(), ":Channel " + name + " USER already in channel\r\n");
             return;
         }
 
-
         ch->addUser(c);
-        //:nick!user@host JOIN #channel
     }
-
-    //for all in channel
     
-    c->enqueue_reply(":" + c->getNick() + "!" + c->getUserName() + "@" + "<host>" +" :END!\r\n");
-
+    if (ch->getTopic().empty()) { 
+        c->enqueue_reply(":server 331 " + c->getNick() + " " + name + " :No topic is set\r\n");
+    }
+    else {
+        c->enqueue_reply(":server 332 " + c->getNick() + " " + name + " :" + ch->getTopic() + "\r\n");
+    }
     set_event_for_sending_msg(c->getFD(), true);
 
-    // • При успешном join отправлять :
-	// • RPL_TOPIC — тема канала
-    //332 RPL_TOPIC
-        //"<channel> :<topic>"
+    std::string namesList = getNamesList(c, ch);
+    c->enqueue_reply(namesList);
+    c->enqueue_reply(":server 366 " + c->getNick() + " " + name + " :End of /NAMES list.\r\n");
+    set_event_for_sending_msg(c->getFD(), true);
 
-	// • RPL_NAMREPLY — список пользователей на канале
-    //353 RPL_NAMREPLY
-    // "<channel> :[[@|+]<nick> [[@|+]<nick> [...]]]"
-    //:nick!user@host JOIN #channel
+    //: nick!user@host JOIN #channel
+    std::string joinMsg = ":" + c->getNick() + "!" + c->getUserName() + "@" + c->getHost() + " JOIN " + name + "\r\n";
+    ch->broadcast(c, joinMsg);
+}
 
-
-    //Ты должен отправить список пользователей:
-    //:server 353 nick = #chan :@op1 +voiced1 user3 ...
-    //:server 366 nick #chan :End of /NAMES list.
+std::string Server::getNamesList(Client *c, Channel *ch)
+{
+    std::string nick = c->getNick();
+    std::string namesList = ":server 353 " + nick + " = " + ch->getName() + " :";
+    const std::map<std::string, Client *> &users = ch->getUsers();
+    for (std::map<std::string, Client *>::const_iterator it = users.begin(); it != users.end(); ++it)
+    {
+        Client *user = it->second;
+        std::string prefix;
+        if (ch->isOperator(user->getNickLower()))
+            prefix = "@";
+        namesList += prefix + user->getNick() + " ";
+    }
+    namesList += "\r\n";
+    return namesList;
 }

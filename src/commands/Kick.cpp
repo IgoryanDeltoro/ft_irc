@@ -19,116 +19,77 @@ void Server::kick(Client *c, const Command &command)
     // <channel>{, <channel>} < user>{, <user>}[<comment>]
 
     std::vector<std::string> params = command.getParams();
-    std::cout << "JOIN Command params:" << std::endl;
-    for (size_t i = 0; i < params.size(); i++)
-        std::cout << i << ": " << params[i] << std::endl;
-
+ 
     if (params.size() < 2)
     {
-        sendError(c, ERR_NEEDMOREPARAMS, "KICK");
+        sendError(c, ERR_NEEDMOREPARAMS, "KICK", "");
         return;
     }
 
-    std::vector<std::string> channelNames = _parser.splitByComma(params[0]);
-    std::vector<std::string> namesToKick = _parser.splitByComma(params[1]);
+    std::string channelNamesRaw = params[0];
+    _parser.trim(channelNamesRaw);
+    std::string namesToKickRaw = params[1];
+    _parser.trim(namesToKickRaw);
 
-    if (channelNames.size() != namesToKick.size())
-    {
-        sendError(c, ERR_NEEDMOREPARAMS, "KICK");
-        return;
-    }
+    std::vector<std::string> channelNames = _parser.splitByComma(channelNamesRaw);
+    std::vector<std::string> namesToKick = _parser.splitByComma(namesToKickRaw);
 
-    // check channels     # || &      && > 2
     for (size_t i = 0; i < channelNames.size(); i++)
     {
-        if (channelNames[i].size() < 2)
+        if (!_parser.isValidChannelName(channelNames[i]) )
         {
-            // error
-            return;
+            sendError(c, ERR_BADCHANMASK, "", channelNames[i]);
+            continue;
         }
-    }
-    // check userNames size > 0
-    for (size_t i = 0; i < namesToKick.size(); i++)
-    {
-        if (namesToKick[i].size() < 1)
+        if (i >= namesToKick.size())
         {
-            //error
-            return;
+            sendError(c, ERR_NEEDMOREPARAMS, "KICK", "");
+            continue;
         }
-    }
 
-    // для каждого channel и userNames
-    for (size_t i = 0; i < namesToKick.size(); i++)
-    {
+        if (_parser.isValidNick(namesToKick[i]))
+        {
+            sendError(c, ERR_NOSUCHNICK, namesToKick[i], "");
+            return;
+        }
+
+        std::string channelNameLower = _parser.ircLowerStr(channelNames[i]);
         Channel *ch;
-        if (!_channels.count(channelNames[i]))
+        if (!_channels.count(channelNameLower))
         {
-            sendError(c, ERR_NOSUCHCHANNEL, channelNames[i]);
-            continue;;
+            sendError(c, ERR_NOSUCHCHANNEL, "", channelNames[i]);
+            continue;
         }
-        ch = _channels[channelNames[i]];
-        if (!ch->isUser(c->getNick()))
+        ch = _channels[channelNameLower];
+        if (!ch->isUser(c->getNickLower()))
         {
-            sendError(c, ERR_NOTONCHANNEL, channelNames[i]);
+            sendError(c, ERR_NOTONCHANNEL, "", channelNames[i]);
             return;
         }
-        if (!ch->getOperators().count(c->getNick()))
+        if (!ch->getOperators().count(c->getNickLower()))
         {
-            sendError(c, ERR_CHANOPRIVSNEEDED, channelNames[i]);
+            sendError(c, ERR_CHANOPRIVSNEEDED, "", channelNames[i]);
             return;
         }
-
+        
         // проверяем ник в канале
-        if (!ch->isUser(namesToKick[i]))
-        {
-            sendError(c, ERR_USERNOTINCHANNEL, namesToKick[i]);
-            return;
-        }
+        std::string nameToKickLower = _parser.ircLowerStr(namesToKick[i]);
 
-        Client *userToKick = NULL;
-        for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
-        {
-            if (it->second->getNick() == namesToKick[i])
-            {
-                userToKick = it->second;
-                break;
-            }
-        }
+        Client *userToKick = ch->getUser(nameToKickLower);
         if (!userToKick)
         {
-            //error
+            sendError(c, ERR_USERNOTINCHANNEL, namesToKick[i], channelNames[i]);
+            return;
         }
 
-        // fds to send users ( + deletet user)
-        // std::vector<int> fds;
-        // std::set<std::string> &chUsers = ch->getUsers();
-        // for (std::map<std::string, Client *>::iterator it = chUsers.begin(); it != chUsers.end(); it++)
-        // {
-        //     fds.push_back(it->second->getFD());
-        // }
-        //удаляем
-        // kickClientFromChannel(*ch, userToKick);
-        // сообщаем всем fds
-        // std::string outMessage = ":" + c->getNick() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
-        // for (size_t d = 0; d < fds.size(); i++)
-        // {
-        //     send_message_to_client(c->getFD(), outMessage);
-        // }
+        ch->removeInvite(nameToKickLower);
+        ch->removeOperator(nameToKickLower);
+        ch->removeUser(nameToKickLower);
+
+        std::string outMessage = ":" + c->getNick() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
+
+        c->enqueue_reply(outMessage);
+        set_event_for_sending_msg(userToKick->getFD(), true);
+        ch->broadcast(c, outMessage);
     }
-
-    //         Examples :
-    //         : Angel INVITE Wiz #Dust; User Angel inviting WiZ to channel #Dust
-    //         INVITE Wiz #Twilight_Zone; Command to invite WiZ to #Twilight_zone
-}
-
-void Server::kickClientFromChannel(Channel &channel, Client *client)
-{
-    const std::string kickedNick = client->getNick();
-    std::map<std::string, Client*> &users = channel.getUsers();
-    std::set<std::string> &operators = channel.getOperators();
-    std::set<std::string> &invited = channel.getInvited();
-
-    users.erase(client->getNick());
-    operators.erase(client->getNick());
-    invited.erase(client->getNick());
 }

@@ -37,10 +37,6 @@ enum Error
     ERR_NOSUCHNICK = 401,
     ERR_KEYSET = 467,
     ERR_UNKNOWNMODE = 472,
-
-    // IRC numeric reply
-    RPL_AWAY = 301,
-    ERR_INPUTTOOLONG = 417,
 };
 
 #endif

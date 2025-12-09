@@ -4,69 +4,71 @@ void Server::invite(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-// Command:  INVITE
-// Parameters: <nickname> <channel>
 
     std::vector<std::string>  params = command.getParams();
-    // std::cout << "JOIN Command params:" << std::endl;
-    // for (size_t i = 0; i < params.size(); i++)
-    //     std::cout << i << ": " << params[i] << std::endl;
-
     if (params.size() < 2)
     {
-        sendError(c, ERR_NEEDMOREPARAMS, "INVITE");
+        sendError(c, ERR_NEEDMOREPARAMS, "INVITE", "");
         return;
     }
     std::string nick = params[0];
+    _parser.trim(nick);
     std::string channel = params[1];
+    _parser.trim(channel);
 
     if (!_parser.isValidNick(nick))
     {
-        sendError(c, ERR_NOSUCHNICK, nick);
+        sendError(c, ERR_NOSUCHNICK, nick, "");
         return;
     }
     if (!_parser.isValidChannelName(channel))
     {
-        sendError(c, ERR_BADCHANMASK, channel);
+        sendError(c, ERR_BADCHANMASK, "", channel);
         return;
     }
 
+    std::string channelLower = _parser.ircLowerStr(channel);
     Channel *ch;
-    if (_channels.count(channel) == 0)
+    if (_channels.count(channelLower) == 0)
     {
-        sendError(c, ERR_NOSUCHCHANNEL, channel);
+        sendError(c, ERR_NOSUCHCHANNEL, "", channel);
         return;
     }
-    ch = _channels[channel];
+    ch = _channels[channelLower];
 
-    if (!ch->isUser(c->getNick()))
+    if (!ch->isUser(c->getNickLower()))
     {
-        sendError(c, ERR_NOTONCHANNEL, channel);
+        sendError(c, ERR_NOTONCHANNEL, "", channel);
         return;
     }
 
-    if (ch->isI() && !ch->isOperator(c->getNick())) {
-        sendError(c, ERR_CHANOPRIVSNEEDED, channel);
+    if (ch->isI() && !ch->isOperator(c->getNickLower())) {
+        sendError(c, ERR_CHANOPRIVSNEEDED, "", channel);
         return;
     }
+    std::string nickLower = _parser.ircLowerStr(nick);
 
-    Client *invitee = getClientByNick(nick);
+    Client *invitee = getClientByNick(nickLower);
     if (!invitee) {
-        sendError(c, ERR_NOSUCHNICK, nick);
+        sendError(c, ERR_NOSUCHNICK, nick, "");
         return;
     }
-    if (ch->isUser(nick)) {
-        sendError(c, ERR_USERONCHANNEL, channel);//todo error user!?
+
+    if (ch->isUser(nickLower))
+    {
+        sendError(c, ERR_USERONCHANNEL, invitee->getRealName(), channel);
         return;
     }
-    if (!ch->isInvited(nick)) {
-        ch->addInvite(nick);
+    if (!ch->isInvited(nickLower))
+    {
+        ch->addInvite(nickLower);
     }
 
-    // :<inviter> INVITE <nickname> :<channel>
-    std::stringstream msg;
-    msg << ":" << c->getNick() << " INVITE " << invitee->getNick() << " :" << ch->getName();
+    std::string msg = ":" + c->getNick() + "!" + c->getUserName() + "@" + c->getHost() + " INVITE " + invitee->getNick() + " :" + ch->getName() + "\r\n";
 
-    c->enqueue_reply(msg.str() + "\r\n");
+    c->enqueue_reply(msg);
     set_event_for_sending_msg(c->getFD(), true);
+
+    invitee->enqueue_reply(msg);
+    set_event_for_sending_msg(invitee->getFD(), true);
 }

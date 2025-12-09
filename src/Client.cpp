@@ -1,6 +1,6 @@
 #include "../includes/Client.hpp"
 
-Client::Client(int fd) : _fd(fd), _last_activity(time(NULL)), _is_registred(false), _pass_ok(false) {}
+Client::Client(int fd, const std::string &host) : _fd(fd), _host(host), _last_activity(time(NULL)), _is_registred(false), _pass_ok(false) {}
 
 Client::~Client() {}
 
@@ -9,6 +9,8 @@ int Client::getFD() const { return this->_fd; }
 int Client::getLastActivity() const { return _last_activity; };
 
 const std::string &Client::getNick() const { return this->_nick; }
+
+const std::string &Client::getNickLower() const { return this->_nickLower; }
 
 const std::string &Client::getUserName() const { return this->_userName; }
 
@@ -34,6 +36,8 @@ void Client::setCmdTimeStamps(const time_t &t) { _cmd_timestamps.push_back(t); }
 
 void Client::setNick(const std::string &nick) { _nick = nick; }
 
+void Client::setNickLower(const std::string &nick) { _nickLower = nick; }
+
 void Client::setUserName(const std::string &userName) { _userName = userName; }
 
 void Client::setRealName(const std::string &realName) { _realName = realName; }
@@ -42,7 +46,11 @@ void Client::setRegStatus(bool status) { _is_registred = status; }
 
 void Client::setLastActivity(const time_t &t) { _last_activity = t; };
 
-bool Client::operator!=(const Client &c) const
+bool Client::operator!=(const Client &c) const { return _fd != c._fd; }
+
+const std::string &Client::getHost() const { return _host;}
+
+std::string Client::buildPrefix() const
 {
-    return _fd != c._fd;
+    return ":" + _nick + "!" + _userName + "@" + _host;
 }

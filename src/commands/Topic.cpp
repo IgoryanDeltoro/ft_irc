@@ -6,43 +6,38 @@ void Server::topic(Client *c, const Command &command)
         return;
     std::vector<std::string> params = command.getParams();
 
-std::cout << "TOPIC Command params:" << std::endl;
-    for (size_t i = 0; i < params.size(); i++)
-        std::cout << i << ": " << params[i] << std::endl;
-
     if (params.size() < 1)
     {
-        sendError(c, ERR_NEEDMOREPARAMS, "TOPIC");
+        sendError(c, ERR_NEEDMOREPARAMS, "TOPIC", "");
         return;
     }
     std::string channelName = params[0];
 
-    if (channelName.empty() || channelName.size() < 2 || (channelName[0] != '#' && channelName[0] != '&'))
+    if (!_parser.isValidChannelName(channelName))
     {
-        sendError(c, ERR_NOSUCHCHANNEL, channelName);//TODO ERROR wrong arg ?
+        sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
         return;
     }
-
-    //TODO!!! check chanelName
+    std::string channelNameLower = _parser.ircLowerStr(channelName);
 
     Channel *ch;
-    if (_channels.count(channelName) == 0)
+    if (_channels.count(channelNameLower) == 0)
     {
-        sendError(c, ERR_NOSUCHCHANNEL, channelName);
+        sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
         return;
     }
-    ch = _channels[channelName];
+    ch = _channels[channelNameLower];
 
-    if (!ch->isUser(c->getNick()))
+    if (!ch->isUser(c->getNickLower()))
     {
-        sendError(c, ERR_NOTONCHANNEL, channelName);
+        sendError(c, ERR_NOTONCHANNEL, "", channelName);
         return;
     }
 
     if (command.getText().empty())
     {
         if (ch->getTopic().empty())
-            sendError(c, RPL_NOTOPIC, channelName);
+            sendError(c, RPL_NOTOPIC, "", channelName);
         else
         {
             std::string msg = channelName + " :" + ch->getTopic() + "\r\n"; // 332 RPL_TOPIC "<channel> :<topic>"
@@ -52,9 +47,9 @@ std::cout << "TOPIC Command params:" << std::endl;
     }
     else
     {
-        if (ch->isT() && !ch->isOperator(c->getNick()))
+        if (ch->isT() && !ch->isOperator(c->getNickLower()))
         {
-            sendError(c, ERR_CHANOPRIVSNEEDED, channelName);
+            sendError(c, ERR_CHANOPRIVSNEEDED, "", channelName);
             return;
         }
         if (ch->getTopic().empty())
@@ -71,6 +66,7 @@ std::cout << "TOPIC Command params:" << std::endl;
             std::string msg = ":User " + c->getNick() + " changed topic from " + old + " to " + command.getText() + " on " + channelName + "\r\n";
             c->enqueue_reply(msg);
             set_event_for_sending_msg(c->getFD(), true);
+            ch->broadcast(c, msg);
         }
     }
 }
