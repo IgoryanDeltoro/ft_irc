@@ -12,7 +12,7 @@ void Server::topic(Client *c, const Command &command)
         return;
     }
     std::string channelName = params[0];
-
+    _parser.trim(channelName);
     if (!_parser.isValidChannelName(channelName))
     {
         sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
@@ -36,38 +36,41 @@ void Server::topic(Client *c, const Command &command)
 
     if (command.getText().empty())
     {
-        if (ch->getTopic().empty())
-            sendError(c, RPL_NOTOPIC, "", channelName);
-        else
+        if (!ch->hasTopic())
         {
-            std::string msg = channelName + " :" + ch->getTopic() + "\r\n"; // 332 RPL_TOPIC "<channel> :<topic>"
+            // 331 RPL_NOTOPIC
+            std::string msg = ":server 331 " + c->getNick() + " " + ch->getName() + " :No topic is set\r\n";
+
             c->enqueue_reply(msg);
             set_event_for_sending_msg(c->getFD(), true);
         }
+        else
+        {
+            // 332 RPL_TOPIC
+            std::string msg1 = ":server 332 " + c->getNick() + " " + ch->getName() + " :" + ch->getTopic() + "\r\n";
+
+            c->enqueue_reply(msg1);
+            set_event_for_sending_msg(c->getFD(), true);
+
+            // 333 RPL_TOPICWHOTIME
+            std::string msg2 = ":server 333 " + c->getNick() + " " + ch->getName() + " " + ch->getTopicSetter() + " " + std::to_string(ch->getTopicTimestamp()) + "\r\n";
+
+            c->enqueue_reply(msg2);
+            set_event_for_sending_msg(c->getFD(), true);
+        }
+        return;
     }
-    else
+
+    if (ch->isT() && !ch->isOperator(c->getNickLower()))
     {
-        if (ch->isT() && !ch->isOperator(c->getNickLower()))
-        {
-            sendError(c, ERR_CHANOPRIVSNEEDED, "", channelName);
-            return;
-        }
-        if (ch->getTopic().empty())
-        {
-            ch->setTopic(command.getText());
-            std::string msg = ":Topic " + command.getText() + " on " + channelName + " seted\r\n";
-            c->enqueue_reply(msg);
-            set_event_for_sending_msg(c->getFD(), true);
-        }
-        else
-        {
-            std::string old = ch->getTopic();
-            ch->setTopic(command.getText());
-            std::string msg = ":User " + c->getNick() + " changed topic from " + old + " to " + command.getText() + " on " + channelName + "\r\n";
-            c->enqueue_reply(msg);
-            set_event_for_sending_msg(c->getFD(), true);
-            ch->broadcast(c, msg);
-            set_event_for_group_members(ch, true);
-        }
+        sendError(c, ERR_CHANOPRIVSNEEDED, "", channelName);
+        return;
     }
+
+    std::string newTopic = command.getText();
+    ch->setTopic(newTopic, c->getNick());
+
+    std::string msg = c->buildPrefix() + " TOPIC " + ch->getName() + " :" + newTopic + "\r\n";
+    ch->broadcast(NULL, msg);
+    set_event_for_group_members(ch, true);
 }

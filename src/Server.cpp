@@ -342,13 +342,13 @@ void Server::removeClientFromAllChannels(Client *c)
         ch->removeOperator(nick);
         ch->removeUser(nick);
         ch->removeInvite(nick);
-        // if (ch->getUsers().size() == 1) {
-
-        // } else if (ch->getUsers().empty()) {
-        //     delete ch;
-        //     _channels.erase(it);
-        // }
+        if (ch->getUsers().empty())
+        {
+            _channels.erase(it);
+            delete ch;
+        }
     }
+    // TODO: Broadcast? когда клиент отсоединяется
 }
 
 void Server::sendError(Client *c, Error err, const std::string &arg, const std::string &channel)
@@ -463,7 +463,9 @@ void Server::process_line(Client *c, std::string line)
 
     if (cmnd.getCommand() == NOT_FOUND)
     {
-        c->enqueue_reply("Command not found <" + line + ">\r\n"); // TODO: check right message format!
+        std::string nick = c->getNick().empty() ? "*" : c->getNick();
+        c->enqueue_reply(RED ": server 421 " + nick + " " + cmnd.getCommandStr() + " : Unknown command" + RESET "\r\n");
+
         set_event_for_sending_msg(c->getFD(), true);
     }
     else if (cmnd.getCommand() == HELP)
@@ -496,11 +498,11 @@ void Server::sendWelcome(Client *c)
 {
     std::string nick = c->getNick();
 
-    c->enqueue_reply(":server 001 " + nick + " :Welcome to IRC server!\r\n");
+    c->enqueue_reply(":server 001 " + nick + " :" + YELLOW + "Welcome to IRC server! " + RESET + "\r\n");
     c->enqueue_reply(":server 002 " + nick + " :Your host is server\r\n");
     c->enqueue_reply(":server 003 " + nick + " :This server was created today\r\n");
-    c->enqueue_reply(":server 375 " + nick + " :- server Message of the day -\r\n");
-    c->enqueue_reply(":server 372 " + nick + " :- Welcome!\r\n");
+    c->enqueue_reply(":server 375 " + nick + " :You can use " + BLUE + "HELP" + RESET + " command\r\n");
+    c->enqueue_reply(":server 372 " + nick + " :Welcome to our IRC network!\r\n");
     c->enqueue_reply(":server 376 " + nick + " :End of /MOTD command\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }

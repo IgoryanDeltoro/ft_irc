@@ -91,10 +91,6 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
     set_event_for_group_members(ch, true);
 }
 
-//  353 RPL_NAMREPLY
-//  "<channel> :[[@|+]<nick> [[@|+]<nick> [...]]]"
-//  366 RPL_ENDOFNAMES
-//  "<channel> :End of /NAMES list"
 std::string Server::getNamesList(Client *c, Channel *ch)
 {
     std::string nick = c->getNick();

@@ -29,7 +29,7 @@ Command Parser::parse(std::string &line) const
         cmdStr[i] = std::toupper(cmdStr[i]);
     }
 
-    cmd.setCommand(mapCommand(cmdStr));
+    cmd.setCommand(mapCommand(cmdStr), cmdStr);
 
     // ---------- 3. Parse parameters ----------
     while (ss >> token)
