@@ -102,29 +102,22 @@ bool Parser::isValidNick(const std::string &nick) const
 
 bool Parser::isValidChannelName(const std::string &name) const
 {
-    if (name.size() < 2) return false;
+    if (name.size() < 2 || name.size() > 200) return false;
     if (name[0] != '#' && name[0] != '&') return false;
 
-    // Name length limit (RFC says up to 200 chars)
-    if (name.size() > 200) return false;
-
-    // Check invalid characters
     for (size_t i = 1; i < name.size(); ++i)
     {
-        unsigned char c = name[i];
-
-        if (c == ' ' ||    // space
-            c == ',' ||    // comma
-            c == '\x07' || // BEL (ASCII 7)
-            c == '\0' ||   // NUL
-            c == '\r' ||   // CR
-            c == '\t' ||   // TAB
-            c == '\n') // LF
+        if (name[i] == ' ' ||    // space
+            name[i] == ',' ||    // comma
+            name[i] == '\x07' || // BEL (ASCII 7)
+            name[i] == '\0' ||   // NUL
+            name[i] == '\r' ||   // CR
+            name[i] == '\t' ||   // TAB
+            name[i] == '\n')     // LF
         {
             return false;
         }
     }
-
     return true;
 }
 

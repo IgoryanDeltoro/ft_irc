@@ -24,6 +24,7 @@ void Server::nick(Client *c, const Command &command)
         return;
     }
     std::string newNickLower = _parser.ircLowerStr(newNick);
+    
     if (isNickExists(newNickLower))
     {
         sendError(c, ERR_NICKNAMEINUSE, newNick, "");
@@ -33,7 +34,7 @@ void Server::nick(Client *c, const Command &command)
     const std::string oldNick = c->getNick();
     const std::string oldNickLower = c->getNickLower();
 
-    if (oldNickLower == newNickLower)
+    if (oldNick == newNick)
         return;
 
     if (!oldNick.empty())
