@@ -1,7 +1,8 @@
 #include "../includes/Server.hpp"
+sig_atomic_t signaled = 1;
 
 Server::Server(const std::string &port, const std::string &password) : _listen_fd(-1), 
-_last_timeout_check(time(NULL)), _port(port), _password(password) {
+    _last_timeout_check(time(NULL)), _port(port), _password(password) {
     _listen_fd = create_and_bind();
     if (_listen_fd < 0) throw std::runtime_error("Failed to bind listening socket");
     if (listen(_listen_fd, BECKLOG) < 0)
@@ -80,10 +81,18 @@ void Server::check_timeouts() {
     }
 }
 
-void Server::run() {
-    std::cout << "Listening on port: " << _port << std::endl;
+void stop_listen(int param) { 
+    std::cout << RED "\nServer has been stoped." RESET << std::endl;
+    if (param == 2) signaled = 0; 
+}
 
-    while (1) {
+void Server::run() {
+    std::cout << BLUE "Listening on port: " GREEN << _port << RESET << std::endl;
+
+    signal (SIGQUIT, SIG_IGN);
+    signal (SIGINT, stop_listen);
+
+    while (signaled) {
         int ready = poll(&_pfds[0], _pfds.size(), 1000);
         if (ready < 0) {
             if (errno == EINTR) continue;
@@ -149,10 +158,12 @@ void Server::eccept_new_fd() {
         pa.events = POLLIN;
         pa.revents = 0;
         _pfds.push_back(pa);
-
-        std::cout << "Accepted fd=" << new_fd << ", host=" << std::string(ipStr) << std::endl;
-        // _clients[new_fd]->enqueue_reply("Welcome to IRC chat.\r\n");
-        // set_event_for_sending_msg(_clients[new_fd]->getFD());
+        
+        time_t timestamp;
+        time(&timestamp);
+        std::string t(ctime(&timestamp));
+        t.erase(t.size() - 1);
+        std::cout << BLUE "[" << t << "] " GREEN "host=" << std::string(ipStr) << RESET << std::endl;
     }
 }
 
@@ -461,12 +472,8 @@ void Server::set_event_for_group_members(Channel *ch, bool doSend) {
 void Server::privmsg(Client *c, const Command &cmd) {
     if (!isClientAuth(c)) return;
 
-    if (cmd.getParams().empty()){sendError(c, ERR_NORECIPIENT, "PRIVMSG", ""); return; };
-
-    if (cmd.getText().empty()) {
-        sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG", "");
-        return;
-    };
+    if (cmd.getParams().empty()) { sendError(c, ERR_NORECIPIENT, "PRIVMSG", ""); return; };
+    if (cmd.getText().empty()) { sendError(c, ERR_NOTEXTTOSEND, "PRIVMSG", ""); return; };
 
     std::string arg1 = cmd.getParams()[0];
     _parser.trim(arg1);
@@ -478,31 +485,21 @@ void Server::privmsg(Client *c, const Command &cmd) {
         std::string lower = _parser.ircLowerStr(ch_mem[i]);
 
         if (lower[0] == '#' || lower[0] == '&') {
-            // send message to target in group
-
-            
-
+            // send message to targets into the group
             std::map<std::string, Channel*>::iterator channel = _channels.find(lower);
-            if (channel == _channels.end()) {
-                sendError(c, ERR_NOSUCHNICK, "", ch_mem[i]);
-                return;
-            };
-            
+            if (channel == _channels.end()) { sendError(c, ERR_NOSUCHNICK, "", ch_mem[i]); return; }; 
+
             channel->second->broadcast(c, ":" + c->getNick() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
             set_event_for_group_members(channel->second, true);
-
         } else {
-
-
             // send message to target
             std::map<std::string, Client*>::iterator it = _nicks.find(lower);
-            if (it == _nicks.end()) {
-                sendError(c, ERR_NOSUCHNICK, ch_mem[i], "");
-                return;
-            };
+            if (it == _nicks.end()) { sendError(c, ERR_NOSUCHNICK, ch_mem[i], ""); return; };
+
             it->second->enqueue_reply(":" + c->getNick() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
             set_event_for_sending_msg(it->second->getFD(), true);
         }
     }
 }
+
 
