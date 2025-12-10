@@ -91,5 +91,6 @@ void Server::kick(Client *c, const Command &command)
         c->enqueue_reply(outMessage);
         set_event_for_sending_msg(userToKick->getFD(), true);
         ch->broadcast(c, outMessage);
+        set_event_for_group_members(ch, true);
     }
 }

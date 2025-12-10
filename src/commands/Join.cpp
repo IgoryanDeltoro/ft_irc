@@ -96,6 +96,7 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
     //: nick!user@host JOIN #channel
     std::string joinMsg = ":" + c->getNick() + "!" + c->getUserName() + "@" + c->getHost() + " JOIN " + name + "\r\n";
     ch->broadcast(c, joinMsg);
+    set_event_for_group_members(ch, true);
 }
 
 std::string Server::getNamesList(Client *c, Channel *ch)
