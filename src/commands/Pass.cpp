@@ -25,7 +25,7 @@ void Server::pass(Client *c, const Command &command)
     if (params[0] != _password) {
         std::cout << "params[0] " << params[0] << " != _password " << _password << std::endl;
 
-        sendError(c, ERR_INCORRECTPASSWORD, "", "");
+        sendError(c, ERR_PASSWDMISMATCH, "", "");
         return;
     }
     c->setPassStatus(true);

@@ -64,6 +64,7 @@ void Server::nick(Client *c, const Command &command)
         if (ch->isUser(oldNickLower))
         {
             ch->broadcast(c, msg);
+            set_event_for_group_members(ch, true);
 
             ch->removeUser(oldNickLower);
             ch->addUser(c);

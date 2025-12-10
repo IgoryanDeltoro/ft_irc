@@ -351,8 +351,8 @@ std::string Server::getErrorText(const Error &error)
         return ":Password already success";
     case ERR_NEEDPASS:
         return ":Server PASS required ";
-    case ERR_INCORRECTPASSWORD:
-        return ":Wrong password";
+    case ERR_PASSWDMISMATCH:
+        return ":Password incorrect"; //"<client> :Password incorrect"
     case ERR_ALREADYREGISTRED:
         return ":You may not reregister";
     case ERR_NEEDMOREPARAMS:

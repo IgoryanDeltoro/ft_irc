@@ -174,4 +174,5 @@ void Server::mode(Client *c, const Command &command)
     c->enqueue_reply(modeMsg);
     set_event_for_sending_msg(c->getFD(), true);
     ch->broadcast(c, modeMsg);
+    set_event_for_group_members(ch, true);
 }

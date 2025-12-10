@@ -67,6 +67,7 @@ void Server::topic(Client *c, const Command &command)
             c->enqueue_reply(msg);
             set_event_for_sending_msg(c->getFD(), true);
             ch->broadcast(c, msg);
+            set_event_for_group_members(ch, true);
         }
     }
 }

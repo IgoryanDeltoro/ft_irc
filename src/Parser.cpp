@@ -83,20 +83,18 @@ std::vector<std::string> Parser::splitByComma(const std::string &s)
 
 bool Parser::isValidNick(const std::string &nick) const
 {
-    if (nick.empty())
-        return false;
-    if (!std::isalpha(nick[0]) && nick[0] != '_')
+    if (nick.empty() || nick.size() > 9)
         return false;
 
-    for (size_t i = 1; i < nick.size(); ++i)
+    const std::string forbiddenFirst = "$:#&~@%+";
+    const std::string forbidden = " ,*?!@";
+
+    if (forbiddenFirst.find(nick[0]) != std::string::npos)
+        return false;
+
+    for (size_t i = 0; i < nick.size(); i++)
     {
-        char c = nick[i];
-        if (!std::isalnum(c) &&
-            c != '_' && c != '-' &&
-            c != '[' && c != ']' &&
-            c != '\\' && c != '`' &&
-            c != '^' && c != '{' &&
-            c != '}')
+        if (forbidden.find(nick[i]) != std::string::npos)
             return false;
     }
     return true;
