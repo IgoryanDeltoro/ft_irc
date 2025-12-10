@@ -18,7 +18,7 @@ void Server::mode(Client *c, const Command &command)
 
     if (!_parser.isValidChannelName(channelName))
     {
-        sendError(c, ERR_BADCHANMASK, "", channelName);
+        sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
         return;
     }
     std::string channelNameLower = _parser.ircLowerStr(channelName);

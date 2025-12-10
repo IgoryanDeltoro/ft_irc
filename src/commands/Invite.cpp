@@ -4,8 +4,7 @@ void Server::invite(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-
-    std::vector<std::string>  params = command.getParams();
+    std::vector<std::string> params = command.getParams();
     if (params.size() < 2)
     {
         sendError(c, ERR_NEEDMOREPARAMS, "INVITE", "");
@@ -41,19 +40,20 @@ void Server::invite(Client *c, const Command &command)
         sendError(c, ERR_NOTONCHANNEL, "", channel);
         return;
     }
-
-    if (ch->isI() && !ch->isOperator(c->getNickLower())) {
+    if (ch->isI() && !ch->isOperator(c->getNickLower()))
+    {
         sendError(c, ERR_CHANOPRIVSNEEDED, "", channel);
         return;
     }
-    std::string nickLower = _parser.ircLowerStr(nick);
 
+    std::string nickLower = _parser.ircLowerStr(nick);
     Client *invitee = getClientByNick(nickLower);
-    if (!invitee) {
+
+    if (!invitee)
+    {
         sendError(c, ERR_NOSUCHNICK, nick, "");
         return;
     }
-
     if (ch->isUser(nickLower))
     {
         sendError(c, ERR_USERONCHANNEL, invitee->getRealName(), channel);

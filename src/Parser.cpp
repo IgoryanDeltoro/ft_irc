@@ -17,7 +17,7 @@ Command Parser::parse(std::string &line) const
 
     // ---------- 1. Parse prefix ----------
     if (line[0] == ':') {
-        ss >> token; // token = ":prefix" ":nick!user@host"
+        ss >> token;                    // token = ":prefix" ":nick!user@host"
         cmd.setPrefix(token.substr(1)); // remove ':'
     }
 
@@ -32,8 +32,10 @@ Command Parser::parse(std::string &line) const
     cmd.setCommand(mapCommand(cmdStr));
 
     // ---------- 3. Parse parameters ----------
-    while (ss >> token) {
-        if (token[0] == ':') {
+    while (ss >> token)
+    {
+        if (token[0] == ':')
+        {
             // It's trailing — grab rest of stream (включая пробелы)
             std::string trailing = token.substr(1);
             std::string rest;
@@ -42,16 +44,18 @@ Command Parser::parse(std::string &line) const
             cmd.setText(trailing);
             break;
         }
-        else {
+        else
+        {
             cmd.addParam(token);
         }
     }
     return cmd;
 }
 
-void Parser::trim(std::string &s) const {
-    size_t start = s.find_first_not_of(" \t\n\r");
-    size_t end = s.find_last_not_of(" \t\n\r");
+void Parser::trim(std::string &s) const
+{
+    size_t start = s.find_first_not_of(" \t");
+    size_t end = s.find_last_not_of(" \t");
 
     if (start == std::string::npos)
         s.clear();
@@ -64,14 +68,17 @@ std::vector<std::string> Parser::splitByComma(const std::string &s)
     std::vector<std::string> splited;
     std::string tmp;
 
-    for (size_t i = 0; i < s.size(); ++i) {
-        if (s[i] == ',') {
+    for (size_t i = 0; i < s.size(); ++i)
+    {
+        if (s[i] == ',')
+        {
             trim(tmp);
             if (!tmp.empty())
                 splited.push_back(tmp);
             tmp.clear();
         }
-        else {
+        else
+        {
             tmp += s[i];
         }
     }
@@ -102,8 +109,10 @@ bool Parser::isValidNick(const std::string &nick) const
 
 bool Parser::isValidChannelName(const std::string &name) const
 {
-    if (name.size() < 2 || name.size() > 200) return false;
-    if (name[0] != '#' && name[0] != '&') return false;
+    if (name.size() < 2 || name.size() > 200)
+        return false;
+    if (name[0] != '#' && name[0] != '&')
+        return false;
 
     for (size_t i = 1; i < name.size(); ++i)
     {
@@ -123,20 +132,34 @@ bool Parser::isValidChannelName(const std::string &name) const
 
 Commands Parser::mapCommand(const std::string &cmd) const
 {
-    if (cmd == "PASS") return PASS;
-    if (cmd == "NICK") return NICK;
-    if (cmd == "USER") return USER;
-    if (cmd == "JOIN") return JOIN;
-    if (cmd == "MODE") return MODE;
-    if (cmd == "KICK") return KICK;
-    if (cmd == "TOPIC") return TOPIC;
-    if (cmd == "INVITE") return INVITE;
-    if (cmd == "PRIVMSG") return PRIVMSG;
-    if (cmd == "QUIT") return QUIT;
-    if (cmd == "LIST") return LIST;
-    if (cmd == "CAP") return CAP;
-    if (cmd == "PING") return PING;
-    if (cmd == "HELP") return HELP;
+    if (cmd == "PASS")
+        return PASS;
+    if (cmd == "NICK")
+        return NICK;
+    if (cmd == "USER")
+        return USER;
+    if (cmd == "JOIN")
+        return JOIN;
+    if (cmd == "MODE")
+        return MODE;
+    if (cmd == "KICK")
+        return KICK;
+    if (cmd == "TOPIC")
+        return TOPIC;
+    if (cmd == "INVITE")
+        return INVITE;
+    if (cmd == "PRIVMSG")
+        return PRIVMSG;
+    if (cmd == "QUIT")
+        return QUIT;
+    if (cmd == "LIST")
+        return LIST;
+    if (cmd == "CAP")
+        return CAP;
+    if (cmd == "PING")
+        return PING;
+    if (cmd == "HELP")
+        return HELP;
     return NOT_FOUND;
 }
 
@@ -144,9 +167,12 @@ char Parser::ircLower(char c) const
 {
     if (c >= 'A' && c <= 'Z')
         return c + 32;
-    if (c == '{') return '[';
-    if (c == '}') return ']';
-    if (c == '|') return '\\';
+    if (c == '{')
+        return '[';
+    if (c == '}')
+        return ']';
+    if (c == '|')
+        return '\\';
     return c;
 }
 
@@ -156,4 +182,4 @@ std::string Parser::ircLowerStr(const std::string &s) const
     for (size_t i = 0; i < out.size(); i++)
         out[i] = ircLower(out[i]);
     return out;
-} 
+}

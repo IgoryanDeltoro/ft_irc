@@ -5,19 +5,6 @@ void Server::kick(Client *c, const Command &command)
     if (!isClientAuth(c))
         return;
 
-    //     ERR_NEEDMOREPARAMS ERR_NOSUCHCHANNEL
-    //         ERR_BADCHANMASK ERR_CHANOPRIVSNEEDED
-    //             ERR_NOTONCHANNEL
-
-    //                 Examples :
-
-    // KICK &Melbourne Matthew; Kick Matthew from &Melbourne
-    // KICK #Finnish John : Speaking English; Kick John from #Finnish using "Speaking English" as the reason(comment).
-    // : WiZ KICK #Finnish John; KICK message from WiZ to remove John from channel #Finnish
-    //  NOTE : It is possible to extend the KICK command parameters to the following :
-    // <channel> <user> [<comment>]
-    // <channel>{, <channel>} < user>{, <user>}[<comment>]
-
     std::vector<std::string> params = command.getParams();
  
     if (params.size() < 2)
@@ -38,7 +25,7 @@ void Server::kick(Client *c, const Command &command)
     {
         if (!_parser.isValidChannelName(channelNames[i]) )
         {
-            sendError(c, ERR_BADCHANMASK, "", channelNames[i]);
+            sendError(c, ERR_NOSUCHCHANNEL, "", channelNames[i]);
             continue;
         }
         if (i >= namesToKick.size())
@@ -61,20 +48,14 @@ void Server::kick(Client *c, const Command &command)
             continue;
         }
         ch = _channels[channelNameLower];
+
         if (!ch->isUser(c->getNickLower()))
         {
             sendError(c, ERR_NOTONCHANNEL, "", channelNames[i]);
             return;
         }
-        if (!ch->getOperators().count(c->getNickLower()))
-        {
-            sendError(c, ERR_CHANOPRIVSNEEDED, "", channelNames[i]);
-            return;
-        }
-        
-        // проверяем ник в канале
-        std::string nameToKickLower = _parser.ircLowerStr(namesToKick[i]);
 
+        std::string nameToKickLower = _parser.ircLowerStr(namesToKick[i]);
         Client *userToKick = ch->getUser(nameToKickLower);
         if (!userToKick)
         {
@@ -82,15 +63,22 @@ void Server::kick(Client *c, const Command &command)
             return;
         }
 
+        userToKick->removeChannel(channelNameLower);
         ch->removeInvite(nameToKickLower);
         ch->removeOperator(nameToKickLower);
         ch->removeUser(nameToKickLower);
 
-        std::string outMessage = ":" + c->getNick() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
+        std::string outMessage = ":" + c->buildPrefix() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
 
         c->enqueue_reply(outMessage);
         set_event_for_sending_msg(userToKick->getFD(), true);
         ch->broadcast(c, outMessage);
         set_event_for_group_members(ch, true);
+
+        if (ch->getUsers().empty())
+        {
+            _channels.erase(channelNameLower);
+            delete ch;
+        }
     }
 }
