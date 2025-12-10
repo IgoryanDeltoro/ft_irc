@@ -24,6 +24,7 @@ SRC =	$(SRC_DIRS)/main.cpp			\
 		$(SRC_DIRS)/commands/Ping.cpp	\
 		$(SRC_DIRS)/commands/Topic.cpp	\
 		$(SRC_DIRS)/commands/User.cpp	\
+		$(SRC_DIRS)/commands/PrivMsg.cpp\
 
 
 OBJ = $(SRC:%.cpp=$(BUILD_DIR)/%.o)

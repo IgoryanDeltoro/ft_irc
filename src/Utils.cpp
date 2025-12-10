@@ -20,3 +20,12 @@ bool Server::isClientAuth(Client *client)
     }
     return true;
 }
+
+std::string Server::getTime() {
+    time_t timestamp;
+    time(&timestamp);
+
+    std::string t(ctime(&timestamp));
+    t.erase(t.size() - 1);
+    return t;
+}
