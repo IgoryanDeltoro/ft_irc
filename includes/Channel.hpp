@@ -21,7 +21,7 @@ class Channel {
         std::string _password;
         int         _userLimit;
         std::string _topicSetter;
-        time_t      _topicTimestamp;
+        int         _topicTimestamp;
 
         bool _i;
         bool _t;
@@ -75,7 +75,7 @@ class Channel {
 
         bool hasTopic() const;
         const std::string &getTopicSetter() const;
-        const time_t &getTopicTimestamp() const;
+        const int &getTopicTimestamp() const;
         void setTopic(const std::string &topic, const std::string &setter);
 };
 

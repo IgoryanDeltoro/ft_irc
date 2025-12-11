@@ -52,11 +52,11 @@ void Server::topic(Client *c, const Command &command)
             c->enqueue_reply(msg1);
             set_event_for_sending_msg(c->getFD(), true);
 
-            // 333 RPL_TOPICWHOTIME
-            std::string msg2 = ":server 333 " + c->getNick() + " " + ch->getName() + " " + ch->getTopicSetter() + " " + std::to_string(ch->getTopicTimestamp()) + "\r\n";
+            // // 333 RPL_TOPICWHOTIME
+            // std::string msg2 = ":server 333 " + c->getNick() + " " + ch->getName() + " " + ch->getTopicSetter() + " " + std::to_string(ch->getTopicTimestamp()) + "\r\n";
 
-            c->enqueue_reply(msg2);
-            set_event_for_sending_msg(c->getFD(), true);
+            // c->enqueue_reply(msg2);
+            // set_event_for_sending_msg(c->getFD(), true);
         }
         return;
     }
