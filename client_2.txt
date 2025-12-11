@@ -1,4 +1,0 @@
-PASS 123
-USER dima 0 * : Dima Dzasenko
-NICK dima
-JOIN #test 

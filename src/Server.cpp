@@ -338,10 +338,15 @@ void Server::removeClientFromAllChannels(Client *c)
         ch->removeOperator(nick);
         ch->removeUser(nick);
         ch->removeInvite(nick);
+
         if (ch->getUsers().empty())
         {
             _channels.erase(it);
             delete ch;
+        } else {
+            std::string outMessage = ":" + c->buildPrefix() + " QUIT " + " :" + "TODO message when QUIT!!!!!!!!!!!!!!!!!!!!" + "\r\n";
+            ch->broadcast(c, outMessage);
+            set_event_for_group_members(ch, true);
         }
     }
     // TODO: Broadcast? когда клиент отсоединяется
