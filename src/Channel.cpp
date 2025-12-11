@@ -32,8 +32,6 @@ const std::string &Channel::getPassword() const { return _password; }
 const std::string &Channel::getTopic() const { return _topic; }
 const std::string &Channel::getName() const { return _name; }
 const std::string &Channel::getNameLower() const { return _nameLower; }
-
-void Channel::setTopic(const std::string &topic) { _topic = topic; }
 void Channel::setPassword(const std::string &password) { _password = password; }
 
 void Channel::setK(const bool &k, const std::string &password)
@@ -115,4 +113,16 @@ std::string Channel::getAllModesString() const
     // }
 
     return mode; //+ args;
+}
+
+bool Channel::hasTopic() const { return !_topic.empty(); }
+
+const std::string &Channel::getTopicSetter() const { return _topicSetter; }
+
+const time_t &Channel::getTopicTimestamp() const { return _topicTimestamp; }
+
+void Channel::setTopic(const std::string &topic, const std::string &setter) {
+    _topic = topic;
+    _topicSetter = setter;
+    _topicTimestamp = std::time(NULL);
 }

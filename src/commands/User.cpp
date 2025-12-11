@@ -4,16 +4,12 @@ void Server::user(Client *c, const Command &command)
 {
     if (!c->getPassStatus())
     {
-        std::cout << "user !c->getPassStatus()" << std::endl;
-
         sendError(c, ERR_NEEDPASS, "", "");
         return;
     }
     std::vector<std::string> params = command.getParams();
-
     if (params.size() < 3 || command.getText().empty())
     {
-
         sendError(c, ERR_NEEDMOREPARAMS, "USER", "");
         return;
     }
@@ -42,7 +38,7 @@ void Server::user(Client *c, const Command &command)
     c->setUserName(userName);
     c->setRealName(realName);
 
-    if (!c->getNick().empty() && !c->getUserName().empty() && !c->getRealName().empty()&&  c->getPassStatus())
+    if (!c->getNick().empty() && !c->getUserName().empty() && !c->getRealName().empty() && c->getPassStatus())
     {
         c->setRegStatus(true);
         sendWelcome(c);

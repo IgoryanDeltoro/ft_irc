@@ -20,6 +20,8 @@ class Channel {
         std::string _topic;
         std::string _password;
         int         _userLimit;
+        std::string _topicSetter;
+        time_t      _topicTimestamp;
 
         bool _i;
         bool _t;
@@ -63,7 +65,6 @@ class Channel {
 
         void broadcast(Client *, const std::string &);
 
-        void setTopic(const std::string &topic);
         void setPassword(const std::string &password);
         void setK(const bool &k, const std::string &password);
         void setI(const bool &i);
@@ -71,6 +72,11 @@ class Channel {
         void setL(const int &limit);
 
         std::string getAllModesString() const;
+
+        bool hasTopic() const;
+        const std::string &getTopicSetter() const;
+        const time_t &getTopicTimestamp() const;
+        void setTopic(const std::string &topic, const std::string &setter);
 };
 
 #endif

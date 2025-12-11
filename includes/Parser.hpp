@@ -5,10 +5,10 @@
 #include <vector>
 #include <sstream>
 
-#include "Client.hpp"
+// #include "Client.hpp"
 #include "Command.hpp"
 
-class Client;
+// class Client;
 class Command;
 
 class Parser {

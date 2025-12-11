@@ -50,7 +50,10 @@ bool Client::operator!=(const Client &c) const { return _fd != c._fd; }
 
 const std::string &Client::getHost() const { return _host;}
 
-std::string Client::buildPrefix() const
-{
-    return ":" + _nick + "!" + _userName + "@" + _host;
-}
+std::string Client::buildPrefix() const { return ":" + _nick + "!" + _userName + "@" + _host; }
+
+int Client::getChannelSize() const { return _channels.size(); }
+
+void Client::addToChannel(const std::string &name) { _channels.insert(name); }
+
+void Client::removeChannel(const std::string &name) { _channels.erase(name); }

@@ -1,7 +1,9 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
+
 #include <iostream>
 #include <deque>
+#include <set>
 
 class Client {
     private:
@@ -17,6 +19,7 @@ class Client {
         std::string             _recv_buff;
         std::deque<std::string> _send_msg;
         std::deque<time_t>      _cmd_timestamps; // for flood control
+        std::set<std::string>   _channels;
 
         Client();
 
@@ -33,6 +36,7 @@ class Client {
         const std::string       &getNickLower() const;
         const std::string       &getUserName() const;
         const std::string       &getRealName() const;
+        int                     getChannelSize() const;
         std::deque<time_t>      &getCmdTimeStamps();
 
         std::string             &getRecvBuff();
@@ -52,6 +56,8 @@ class Client {
         void setCmdTimeStamps(const time_t &);
         void setLastActivity(const time_t &);
         std::string buildPrefix() const;
+        void addToChannel(const std::string &name);
+        void removeChannel(const std::string &name);
 };
 
 #endif

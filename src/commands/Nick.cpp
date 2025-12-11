@@ -23,22 +23,24 @@ void Server::nick(Client *c, const Command &command)
         sendError(c, ERR_ERRONEUSNICKNAME, newNick, "");
         return;
     }
-    std::string newNickLower = _parser.ircLowerStr(newNick);
-    
-    if (isNickExists(newNickLower))
-    {
-        sendError(c, ERR_NICKNAMEINUSE, newNick, "");
-        return;
-    }
 
     const std::string oldNick = c->getNick();
     const std::string oldNickLower = c->getNickLower();
+    const std::string newNickLower = _parser.ircLowerStr(newNick);
 
     if (oldNick == newNick)
         return;
+    if (newNickLower != oldNickLower)
+    {
+        if (isNickExists(newNickLower))
+        {
+            sendError(c, ERR_NICKNAMEINUSE, newNick, "");
+            return;
+        }
+    }
 
     if (!oldNick.empty())
-            _nicks.erase(oldNickLower);
+        _nicks.erase(oldNickLower);
 
     c->setNick(newNick);
     c->setNickLower(newNickLower);
@@ -53,11 +55,14 @@ void Server::nick(Client *c, const Command &command)
         }
         return;
     }
-    std::string msg = ":" + oldNick + " NICK " + newNick + "\r\n";
+
+    std::string msg = ":" + oldNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";
+
     c->enqueue_reply(msg);
     set_event_for_sending_msg(c->getFD(), true);
 
-    // TODO!!!! несколько юзеров в одинаковых каналах
+    if (!c->getRegStatus())
+        return;
 
     for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end(); ++it)
     {
@@ -83,4 +88,3 @@ void Server::nick(Client *c, const Command &command)
         }
     }
 }
-

@@ -4,8 +4,7 @@ void Server::invite(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-
-    std::vector<std::string>  params = command.getParams();
+    std::vector<std::string> params = command.getParams();
     if (params.size() < 2)
     {
         sendError(c, ERR_NEEDMOREPARAMS, "INVITE", "");
@@ -42,21 +41,23 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
 
-    if (ch->isI() && !ch->isOperator(c->getNickLower())) {
+    if (ch->isI() && !ch->isOperator(c->getNickLower()))
+    {
         sendError(c, ERR_CHANOPRIVSNEEDED, "", channel);
         return;
     }
-    std::string nickLower = _parser.ircLowerStr(nick);
 
+    std::string nickLower = _parser.ircLowerStr(nick);
     Client *invitee = getClientByNick(nickLower);
-    if (!invitee) {
+
+    if (!invitee)
+    {
         sendError(c, ERR_NOSUCHNICK, nick, "");
         return;
     }
-
     if (ch->isUser(nickLower))
     {
-        sendError(c, ERR_USERONCHANNEL, invitee->getRealName(), channel);
+        sendError(c, ERR_USERONCHANNEL, invitee->getNick(), channel);
         return;
     }
     if (!ch->isInvited(nickLower))
@@ -64,11 +65,13 @@ void Server::invite(Client *c, const Command &command)
         ch->addInvite(nickLower);
     }
 
-    std::string msg = ":" + c->getNick() + "!" + c->getUserName() + "@" + c->getHost() + " INVITE " + invitee->getNick() + " :" + ch->getName() + "\r\n";
-
-    c->enqueue_reply(msg);
-    set_event_for_sending_msg(c->getFD(), true);
-
+    std::string msg = c->buildPrefix() + " INVITE " + invitee->getNick() + " " + ch->getName() + "\r\n";
     invitee->enqueue_reply(msg);
     set_event_for_sending_msg(invitee->getFD(), true);
+
+    std::string msg2 = ":server 341 " + c->getNick() + " " + invitee->getNick() + " " + ch->getName() + "\r\n";
+    c->enqueue_reply(msg2);
+    set_event_for_sending_msg(c->getFD(), true);
+
+    // TODO:  RPL_AWAY
 }

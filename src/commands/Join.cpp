@@ -4,8 +4,6 @@ void Server::join(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-    // Command: JOIN
-    // Parameters: <channel>{,<channel>} [<key>{,<key>}]
 
     std::vector<std::string> params = command.getParams();
     if (params.empty())
@@ -30,10 +28,14 @@ void Server::join(Client *c, const Command &command)
     {
         std::string channelName = channelNames[i];
         std::string key = (i < keys.size() ? keys[i] : "");
-
         if (!_parser.isValidChannelName(channelName))
         {
-            sendError(c, ERR_BADCHANMASK, "", channelName);
+            sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
+            continue;
+        }
+        if (c->getChannelSize() >= 10)
+        {
+            sendError(c, ERR_TOOMANYCHANNELS, "", channelName);
             continue;
         }
         joinChannel(c, channelName, key);
@@ -51,41 +53,32 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
         }
         _channels[lower] = ch;
     }
-    else {
+    else
+    {
         ch = _channels[lower];
 
         if (ch->isI() && !ch->isInvited(c->getNickLower())) {
             sendError(c, ERR_INVITEONLYCHAN, "", name);
             return;
         }
-
         if (ch->isK() && ch->getPassword() != password) {
             sendError(c, ERR_BADCHANNELKEY, "", name);
             return;
         }
-
-        // +l (user limit)
         if (ch->isL() && ch->getUserLimit() > 0 && (int)ch->getUsers().size() >= ch->getUserLimit())
         {
             sendError(c, ERR_CHANNELISFULL, "", name);
             return;
         }
-
         if (ch->isUser(c->getNickLower()))
-        {
-            // send_message_to_client(c->getFD(), ":Channel " + name + " USER already in channel\r\n");
             return;
-        }
-
         ch->addUser(c);
     }
     
-    if (ch->getTopic().empty()) { 
+    if (ch->getTopic().empty())
         c->enqueue_reply(":server 331 " + c->getNick() + " " + name + " :No topic is set\r\n");
-    }
-    else {
+    else
         c->enqueue_reply(":server 332 " + c->getNick() + " " + name + " :" + ch->getTopic() + "\r\n");
-    }
     set_event_for_sending_msg(c->getFD(), true);
 
     std::string namesList = getNamesList(c, ch);
@@ -93,8 +86,7 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
     c->enqueue_reply(":server 366 " + c->getNick() + " " + name + " :End of /NAMES list.\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 
-    //: nick!user@host JOIN #channel
-    std::string joinMsg = ":" + c->getNick() + "!" + c->getUserName() + "@" + c->getHost() + " JOIN " + name + "\r\n";
+    std::string joinMsg = c->buildPrefix() + " JOIN " + name + "\r\n";
     ch->broadcast(c, joinMsg);
     set_event_for_group_members(ch, true);
 }

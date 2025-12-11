@@ -4,8 +4,6 @@ void Server::mode(Client *c, const Command &command)
 {
     if (!isClientAuth(c))
         return;
-    // Parameters:
-    //  <channel> {[+| -] | o | p | s | i | t | n | b | v}[<limit>][<user>]
     std::vector<std::string> params = command.getParams();
     if (params.empty()) {
         sendError(c, ERR_NEEDMOREPARAMS, "MODE", "");
@@ -18,7 +16,7 @@ void Server::mode(Client *c, const Command &command)
 
     if (!_parser.isValidChannelName(channelName))
     {
-        sendError(c, ERR_BADCHANMASK, "", channelName);
+        sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
         return;
     }
     std::string channelNameLower = _parser.ircLowerStr(channelName);
@@ -119,9 +117,14 @@ void Server::mode(Client *c, const Command &command)
                 }
                 std::string limRaw = args[argIndex++];
                 _parser.trim(limRaw);
-                // TODO: chech limRaw int NUMBER correct ????
+
+                std::istringstream iss(limRaw);
                 int lim;
-                std::istringstream(limRaw) >> lim;
+                if (!(iss >> lim))
+                {
+                    sendError(c, ERR_NEEDMOREPARAMS, "MODE", "");
+                    continue;
+                }
                 ch->setL(lim);
             }
             else {
