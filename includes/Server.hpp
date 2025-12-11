@@ -75,6 +75,7 @@ class Server {
         void sendError(Client *c, Error err, const std::string &arg, const std::string &channel);
         void sendWelcome(Client *c);
         std::string getNamesList(Client *c, Channel *ch);
+        std::string getTime();
 };
 
 #endif
