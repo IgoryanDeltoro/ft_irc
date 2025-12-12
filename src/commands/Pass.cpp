@@ -3,27 +3,14 @@
 void Server::pass(Client *c, const Command &command)
 {
     std::vector<std::string> params = command.getParams();
-    if (params.size() < 1)
-    {
-        sendError(c, ERR_NEEDMOREPARAMS, "PASS", "");
+    if (params.size() < 1) {
+        sendNumericReply(c, ERR_NEEDMOREPARAMS, "PASS", "");
         return;
     }
-    if (c->getRegStatus())
-    {
-        sendError(c, ERR_ALREADYREGISTRED, "", "");
+    if (c->getRegStatus()) {
+        sendNumericReply(c, ERR_ALREADYREGISTRED, "", "");
         return;
     }
-    if (c->getPassStatus())
-    {
-        sendError(c, ERR_PASSALREADY, "", "");
-        return;
-    }
-    _parser.trim(params[0]);
-
-    if (params[0] != _password)
-    {
-        sendError(c, ERR_PASSWDMISMATCH, "", "");
-        return;
-    }
+    if (params[0] != _password) return;
     c->setPassStatus(true);
 }

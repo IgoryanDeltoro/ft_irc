@@ -6,35 +6,34 @@ void Server::mode(Client *c, const Command &command)
         return;
     std::vector<std::string> params = command.getParams();
     if (params.empty()) {
-        sendError(c, ERR_NEEDMOREPARAMS, "MODE", "");
+        sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
         return;
     }
     std::string channelName = params[0];
-    _parser.trim(channelName);
     // if (!channelName.empty() && !(channelName[0] == '#' || channelName[0] == '&'))
     //     return;
     // TODO: empty?
 
     if (!_parser.isValidChannelName(channelName))
     {
-        sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
+        sendNumericReply(c, ERR_BADCHANMASK, "", channelName);
         return;
     }
     std::string channelNameLower = _parser.ircLowerStr(channelName);
     if (_channels.count(channelNameLower) == 0)
     {
-        sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
+        sendNumericReply(c, ERR_NOSUCHCHANNEL, "", channelName);
         return;
     }
     Channel *ch = _channels[channelNameLower];
     if (!ch->isUser(c->getNickLower())) {
-        sendError(c, ERR_NOTONCHANNEL, "", channelName);
+        sendNumericReply(c, ERR_NOTONCHANNEL, "", channelName);
         return;
     }
 
     if (!ch->isOperator(c->getNickLower()))
     {
-        sendError(c, ERR_CHANOPRIVSNEEDED, "", channelName);
+        sendNumericReply(c, ERR_CHANOPRIVSNEEDED, "", channelName);
         return;
     }
 
@@ -88,18 +87,17 @@ void Server::mode(Client *c, const Command &command)
             if (adding) {
                 if (ch->isK())
                 {
-                    sendError(c, ERR_KEYSET, "", ch->getName());
+                    sendNumericReply(c, ERR_KEYSET, "", ch->getName());
                     continue;
                 }
                 if (argIndex >= args.size()) {
-                    sendError(c, ERR_NEEDMOREPARAMS, "MODE", "");
+                    sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
                     continue;
                 }
                 std::string pass = args[argIndex++];
-                _parser.trim(pass);
                 if (pass.empty())
                 {
-                    sendError(c, ERR_NEEDMOREPARAMS, "MODE", "");
+                    sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
                     continue;
                 }
                 ch->setK(true, pass);
@@ -113,17 +111,15 @@ void Server::mode(Client *c, const Command &command)
         case 'l':
             if (adding) {
                 if (argIndex >= args.size()) {
-                    sendError(c, ERR_NEEDMOREPARAMS, "MODE", "");
+                    sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
                     continue;
                 }
                 std::string limRaw = args[argIndex++];
-                _parser.trim(limRaw);
-
                 std::istringstream iss(limRaw);
                 int lim;
                 if (!(iss >> lim))
                 {
-                    sendError(c, ERR_NEEDMOREPARAMS, "MODE", "");
+                    sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
                     continue;
                 }
                 ch->setL(lim);
@@ -136,21 +132,20 @@ void Server::mode(Client *c, const Command &command)
             break;
         case 'o':
             if (argIndex >= args.size()) {
-                sendError(c, ERR_NEEDMOREPARAMS, "MODE", "");
+                sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
                 continue;
             }
             else {
                 std::string nick = args[argIndex++];
-                _parser.trim(nick);
                 if (!_parser.isValidNick(nick))
                 {
-                    sendError(c, ERR_NOSUCHNICK, nick, "");
+                    sendNumericReply(c, ERR_NOSUCHNICK, nick, "");
                     continue;
                 }
                 std::string nickLower = _parser.ircLowerStr(nick);
                 Client *user = getClientByNick(nickLower);
                 if (!user) {
-                    sendError(c, ERR_NOSUCHNICK, nick, "");
+                    sendNumericReply(c, ERR_NOSUCHNICK, nick, "");
                     continue;
                 }
                 if (adding)
@@ -160,7 +155,7 @@ void Server::mode(Client *c, const Command &command)
             }
             break;
         default:
-            sendError(c, ERR_UNKNOWNMODE, std::string(1, f) , "");
+            sendNumericReply(c, ERR_UNKNOWNMODE, std::string(1, f), "");
             continue;
         }
     }

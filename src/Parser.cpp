@@ -6,7 +6,7 @@ Parser::~Parser() {}
 Command Parser::parse(std::string &line) const
 {
     Command cmd;
-    
+
     for (size_t i = 0; i < line.size(); ++i) {
         char c = line[i];
         if (c == '\0' || c == '\r' || c == '\n' || c == '\x07') return cmd;
@@ -63,8 +63,8 @@ Command Parser::parse(std::string &line) const
 
 void Parser::trim(std::string &s) const
 {
-    size_t start = s.find_first_not_of(" \t");
-    size_t end = s.find_last_not_of(" \t");
+    size_t start = s.find_first_not_of(" ");
+    size_t end = s.find_last_not_of(" ");
 
     if (start == std::string::npos)
         s.clear();
@@ -72,26 +72,19 @@ void Parser::trim(std::string &s) const
         s = s.substr(start, end - start + 1);
 }
 
-std::vector<std::string> Parser::splitByComma(const std::string &s)
+const std::vector<std::string> Parser::splitByComma(const std::string &s)
 {
     std::vector<std::string> splited;
     std::string tmp;
 
-    for (size_t i = 0; i < s.size(); ++i)
-    {
-        if (s[i] == ',')
-        {
-            trim(tmp);
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == ',') {
             if (!tmp.empty())
                 splited.push_back(tmp);
             tmp.clear();
         }
-        else
-        {
-            tmp += s[i];
-        }
+        else  tmp += s[i];
     }
-    trim(tmp);
     if (!tmp.empty())
         splited.push_back(tmp);
     return splited;
@@ -99,42 +92,21 @@ std::vector<std::string> Parser::splitByComma(const std::string &s)
 
 bool Parser::isValidNick(const std::string &nick) const
 {
-    if (nick.empty() || nick.size() > 9)
-        return false;
-
-    const std::string forbiddenFirst = "$:#&~@%+";
-    const std::string forbidden = " ,*?!@";
-
-    if (forbiddenFirst.find(nick[0]) != std::string::npos)
-        return false;
-
-    for (size_t i = 0; i < nick.size(); i++)
-    {
-        if (forbidden.find(nick[i]) != std::string::npos)
-            return false;
+    if (nick.empty() || nick.size() > 9) return false;
+    if (!std::isalpha(nick[0])) return false;
+    for (size_t i = 1; i < nick.size(); i++) {
+        char c = nick[i];
+        if (!(std::isalpha(c) || std::isdigit(c) || c == '-' || c == '[' || c == ']' || c == '\\' || c == '`' || c == '^' || c == '{' || c == '}')) return false;
     }
     return true;
 }
 
 bool Parser::isValidChannelName(const std::string &name) const
 {
-    if (name.size() < 2 || name.size() > 200)
-        return false;
-    if (name[0] != '#' && name[0] != '&')
-        return false;
-
-    for (size_t i = 1; i < name.size(); ++i)
-    {
-        if (name[i] == ' ' ||    // space
-            name[i] == ',' ||    // comma
-            name[i] == '\x07' || // BEL (ASCII 7)
-            name[i] == '\0' ||   // NUL
-            name[i] == '\r' ||   // CR
-            name[i] == '\t' ||   // TAB
-            name[i] == '\n')     // LF
-        {
-            return false;
-        }
+    if (name.size() < 2 || name.size() > 200) return false;
+    if (name[0] != '#' && name[0] != '&') return false;
+    for (size_t i = 1; i < name.size(); ++i) {
+        if (name[i] == ' ' || name[i] == ',' || name[i] == '\x07' ||  name[i] == '\0' || name[i] == '\r' || name[i] == '\n') return false;
     }
     return true;
 }

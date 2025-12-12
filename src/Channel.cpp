@@ -126,3 +126,15 @@ void Channel::setTopic(const std::string &topic, const std::string &setter) {
     _topicSetter = setter;
     _topicTimestamp = std::time(NULL);
 }
+
+const std::string Channel::getNamesList() const
+{
+    std::string list;
+    for (std::map<std::string, Client *>::const_iterator it = _users.begin(); it != _users.end(); ++it) {
+        Client *user = it->second;
+        std::string prefix;
+        if (isOperator(user->getNickLower())) prefix = "@";
+        list += prefix + user->getNick() + " ";
+    }
+    return list;
+}

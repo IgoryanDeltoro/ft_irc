@@ -54,6 +54,8 @@ std::string Client::buildPrefix() const { return ":" + _nick + "!" + _userName +
 
 int Client::getChannelSize() const { return _channels.size(); }
 
+const std::set<std::string> &Client::getChannels() const { return _channels; }
+
 void Client::addToChannel(const std::string &name) { _channels.insert(name); }
 
 void Client::removeChannel(const std::string &name) { _channels.erase(name); }

@@ -10,12 +10,12 @@ bool Server::isClientAuth(Client *client)
 
     if (!client->getPassStatus())
     {
-        sendError(client, ERR_NEEDPASS, "", "");
+        // sendNumericReply(client, ERR_NEEDPASS, "", ""); TODO
         return false;
     }
     if (!client->getRegStatus())
     {
-        sendError(client, ERR_NOTREGISTERED, "", "");
+        // sendNumericReply(client, ERR_NOTREGISTERED, "", ""); TODO
         return false;
     }
     return true;

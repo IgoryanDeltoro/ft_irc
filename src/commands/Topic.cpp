@@ -8,14 +8,13 @@ void Server::topic(Client *c, const Command &command)
 
     if (params.size() < 1)
     {
-        sendError(c, ERR_NEEDMOREPARAMS, "TOPIC", "");
+        sendNumericReply(c, ERR_NEEDMOREPARAMS, "TOPIC", "");
         return;
     }
     std::string channelName = params[0];
-    _parser.trim(channelName);
     if (!_parser.isValidChannelName(channelName))
     {
-        sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
+        sendNumericReply(c, ERR_BADCHANMASK, "", channelName);
         return;
     }
     std::string channelNameLower = _parser.ircLowerStr(channelName);
@@ -23,14 +22,14 @@ void Server::topic(Client *c, const Command &command)
     Channel *ch;
     if (_channels.count(channelNameLower) == 0)
     {
-        sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
+        sendNumericReply(c, ERR_NOSUCHCHANNEL, "", channelName);
         return;
     }
     ch = _channels[channelNameLower];
 
     if (!ch->isUser(c->getNickLower()))
     {
-        sendError(c, ERR_NOTONCHANNEL, "", channelName);
+        sendNumericReply(c, ERR_NOTONCHANNEL, "", channelName);
         return;
     }
 
@@ -63,7 +62,7 @@ void Server::topic(Client *c, const Command &command)
 
     if (ch->isT() && !ch->isOperator(c->getNickLower()))
     {
-        sendError(c, ERR_CHANOPRIVSNEEDED, "", channelName);
+        sendNumericReply(c, ERR_CHANOPRIVSNEEDED, "", channelName);
         return;
     }
 
