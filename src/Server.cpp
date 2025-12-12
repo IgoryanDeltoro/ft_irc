@@ -338,11 +338,11 @@ void Server::removeClientFromAllChannels(Client *c)
         ch->removeOperator(nick);
         ch->removeUser(nick);
         ch->removeInvite(nick);
-        if (ch->getUsers().empty())
-        {
-            _channels.erase(it);
-            delete ch;
-        }
+        // if (ch->getUsers().empty())
+        // {
+        //     _channels.erase(it);
+        //     delete ch;
+        // }
     }
     // TODO: Broadcast? когда клиент отсоединяется
 }
@@ -450,45 +450,36 @@ void Server::process_line(Client *c, std::string line)
 {
     std::cout << "line: " << line << std::endl;
     _parser.trim(line);
-    if (line.empty() || line.size() > 510)
-    {
-        return;
-    }
-
+    if (line.empty() || line.size() > 510) return;
+    
     Command cmnd = _parser.parse(line);
 
-    if (cmnd.getCommand() == NOT_VALID)
-        return;
-    else if (cmnd.getCommand() == NOT_FOUND)
-    {
+    if (cmnd.getCommand() == NOT_VALID) return;
+    if (!cmnd.getPrefix().empty()) {
+        if (!c->getRegStatus()) return;
+        if (cmnd.getPrefix() != c->getNick()) return;
+    }
+    if (cmnd.getCommand() == NOT_FOUND) {
         std::string nick = c->getNick().empty() ? "*" : c->getNick();
         c->enqueue_reply(":server 421 " + nick + " " + cmnd.getCommandStr() + " :" + RED "Unknown command" + RESET "\r\n");
         set_event_for_sending_msg(c->getFD(), true);
+        return;
     }
-    else if (cmnd.getCommand() == HELP)
-        help(c);
-    else if (cmnd.getCommand() == PASS)
-        pass(c, cmnd);
-    else if (cmnd.getCommand() == NICK)
-        nick(c, cmnd);
-    else if (cmnd.getCommand() == USER)
-        user(c, cmnd);
-    else if (cmnd.getCommand() == JOIN)
-        join(c, cmnd);
-    else if (cmnd.getCommand() == MODE)
-        mode(c, cmnd);
-    else if (cmnd.getCommand() == KICK)
-        kick(c, cmnd);
-    else if (cmnd.getCommand() == TOPIC)
-        topic(c, cmnd);
-    else if (cmnd.getCommand() == INVITE)
-        invite(c, cmnd);
-    else if (cmnd.getCommand() == CAP)
-        cap(c, cmnd);
-    else if (cmnd.getCommand() == PRIVMSG)
-        privmsg(c, cmnd);
-    else if (cmnd.getCommand() == PING)
-        ping(c, cmnd);
+    switch (cmnd.getCommand()) {
+        case HELP: help(c); break;
+        case PASS: pass(c, cmnd); break;
+        case NICK: nick(c, cmnd); break;
+        case USER: user(c, cmnd); break;
+        case JOIN: join(c, cmnd); break;
+        case MODE: mode(c, cmnd); break;
+        case KICK: kick(c, cmnd); break;
+        case TOPIC: topic(c, cmnd); break;
+        case INVITE: invite(c, cmnd); break;
+        case CAP: cap(c, cmnd); break;
+        case PRIVMSG: privmsg(c, cmnd); break;
+        case PING: ping(c, cmnd); break;
+        default: break;
+    }
 }
 
 void Server::sendWelcome(Client *c)
