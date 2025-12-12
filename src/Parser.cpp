@@ -5,26 +5,26 @@ Parser::~Parser() {}
 
 Command Parser::parse(std::string &line) const
 {
-
     Command cmd;
-
-    trim(line);
-    if (line.empty())
-        return cmd;
+    
+    for (size_t i = 0; i < line.size(); ++i) {
+        char c = line[i];
+        if (c == '\0' || c == '\r' || c == '\n' || c == '\x07') return cmd;
+    }
 
     std::stringstream ss(line);
     std::string token;
 
     // ---------- 1. Parse prefix ----------
     if (line[0] == ':') {
-        ss >> token;                    // token = ":prefix" ":nick!user@host"
-        cmd.setPrefix(token.substr(1)); // remove ':'
+        ss >> token;
+        cmd.setPrefix(token.substr(1));
     }
 
     // ---------- 2. Parse command ----------
-    ss >> token;
+    if (!(ss >> token)) return cmd;
+    
     std::string cmdStr = token;
-
     for (size_t i = 0; i < cmdStr.size(); i++) {
         cmdStr[i] = std::toupper(cmdStr[i]);
     }
@@ -32,11 +32,9 @@ Command Parser::parse(std::string &line) const
     cmd.setCommand(mapCommand(cmdStr), cmdStr);
 
     // ---------- 3. Parse parameters ----------
-    while (ss >> token)
-    {
-        if (token[0] == ':')
-        {
-            // It's trailing — grab rest of stream (включая пробелы)
+    int paramCount = 0;
+    while (ss >> token) {
+        if (token[0] == ':') {
             std::string trailing = token.substr(1);
             std::string rest;
             std::getline(ss, rest);
@@ -44,8 +42,19 @@ Command Parser::parse(std::string &line) const
             cmd.setText(trailing);
             break;
         }
-        else
-        {
+        else {
+            for (size_t i = 0; i < token.size(); i++) {
+                char c = token[i];
+                if (c == ' ' || c == '\t' || c == '\0' || c == '\r' || c == '\n' || c == '\x07')
+                {
+                    cmd.setCommand(NOT_VALID, "");
+                    return cmd;
+                }
+            }
+            if (++paramCount > 15) {
+                cmd.setCommand(NOT_VALID, "");
+                return cmd;
+            }
             cmd.addParam(token);
         }
     }

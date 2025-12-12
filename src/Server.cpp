@@ -371,9 +371,9 @@ void Server::sendError(Client *c, Error err, const std::string &arg, const std::
         message.replace(pos, 9, channel);
 
     std::string s;
-    std::stringstream out1;
-    out1 << err;
-    s = out1.str();
+    std::stringstream out;
+    out << err;
+    s = out.str();
 
     c->enqueue_reply(RED ":server " + s + " " + nick + " " + message + RESET "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
@@ -457,11 +457,12 @@ void Server::process_line(Client *c, std::string line)
 
     Command cmnd = _parser.parse(line);
 
-    if (cmnd.getCommand() == NOT_FOUND)
+    if (cmnd.getCommand() == NOT_VALID)
+        return;
+    else if (cmnd.getCommand() == NOT_FOUND)
     {
         std::string nick = c->getNick().empty() ? "*" : c->getNick();
-        c->enqueue_reply(RED ": server 421 " + nick + " " + cmnd.getCommandStr() + " : Unknown command" + RESET "\r\n");
-
+        c->enqueue_reply(":server 421 " + nick + " " + cmnd.getCommandStr() + " :" + RED "Unknown command" + RESET "\r\n");
         set_event_for_sending_msg(c->getFD(), true);
     }
     else if (cmnd.getCommand() == HELP)
@@ -494,12 +495,37 @@ void Server::sendWelcome(Client *c)
 {
     std::string nick = c->getNick();
 
-    c->enqueue_reply(":server 001 " + nick + " :" + YELLOW + "Welcome to IRC server! " + RESET + "\r\n");
+    std::string welcome = GREEN;
+    welcome.append("__        _______ _     ____ ___  __  __ _____   _ \n");
+    welcome.append(GREEN);
+    welcome.append("\\ \\      / / ____| |   / ___/ _ \\|  \\/  | ____| | |\n");
+    welcome.append(GREEN);
+    welcome.append(" \\ \\ /\\ / /|  _| | |  | |  | | | | |\\/| |  _|   | |\n");
+    welcome.append(GREEN);
+    welcome.append("  \\ V  V / | |___| |__| |__| |_| | |  | | |___  |_|\n");
+    welcome.append(GREEN);
+    welcome.append("   \\_/\\_/  |_____|_____\\____\\___/|_|  |_|_____| (_)");
+    welcome.append(RESET);
+
+    std::string motd = BLUE;
+    motd.append("Welcome to our IRC server!\n");
+    motd.append(BLUE);
+    motd.append("Type ");
+    motd.append(GREEN);
+    motd.append("HELP");
+    motd.append(BLUE);
+    motd.append(" to see all available commands.");
+    motd.append(RESET);
+
+    c->enqueue_reply(":server 001 " + nick + " :" + welcome + "\r\n");
     c->enqueue_reply(":server 002 " + nick + " :Your host is server\r\n");
     c->enqueue_reply(":server 003 " + nick + " :This server was created today\r\n");
-    c->enqueue_reply(":server 375 " + nick + " :You can use " + BLUE + "HELP" + RESET + " command\r\n");
-    c->enqueue_reply(":server 372 " + nick + " :Welcome to our IRC network!\r\n");
-    c->enqueue_reply(":server 376 " + nick + " :End of /MOTD command\r\n");
+
+    c->enqueue_reply(":server 375 " + nick + " :- Message of the Day -\r\n");
+    c->enqueue_reply(":server 372 " + nick + " :- " + motd + "\r\n");
+
+    c->enqueue_reply(":server 376 " + nick + " :Have a wonderful chat session! 😊\r\n");
+
     set_event_for_sending_msg(c->getFD(), true);
 }
 

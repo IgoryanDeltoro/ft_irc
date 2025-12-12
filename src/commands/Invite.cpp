@@ -11,9 +11,7 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
     std::string nick = params[0];
-    _parser.trim(nick);
     std::string channel = params[1];
-    _parser.trim(channel);
 
     if (!_parser.isValidNick(nick))
     {
@@ -26,11 +24,22 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
 
+    std::string nickLower = _parser.ircLowerStr(nick);
+    Client *invitee = getClientByNick(nickLower);
+    if (!invitee)
+    {
+        sendError(c, ERR_NOSUCHNICK, nick, "");
+        return;
+    }
+
     std::string channelLower = _parser.ircLowerStr(channel);
     Channel *ch;
     if (_channels.count(channelLower) == 0)
     {
-        sendError(c, ERR_NOSUCHCHANNEL, "", channel);
+        // TODO check again (send only 341 to client?)
+        std::string msg2 = ":server 341 " + c->getNick() + " " + invitee->getNick() + " " + ch->getName() + "\r\n";
+        c->enqueue_reply(msg2);
+        set_event_for_sending_msg(c->getFD(), true);
         return;
     }
     ch = _channels[channelLower];
@@ -47,14 +56,6 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
 
-    std::string nickLower = _parser.ircLowerStr(nick);
-    Client *invitee = getClientByNick(nickLower);
-
-    if (!invitee)
-    {
-        sendError(c, ERR_NOSUCHNICK, nick, "");
-        return;
-    }
     if (ch->isUser(nickLower))
     {
         sendError(c, ERR_USERONCHANNEL, invitee->getNick(), channel);
@@ -66,6 +67,8 @@ void Server::invite(Client *c, const Command &command)
     }
 
     std::string msg = c->buildPrefix() + " INVITE " + invitee->getNick() + " " + ch->getName() + "\r\n";
+
+    // TODO check with msg = c->buildPrefix() + " INVITE " + invitee->getNick() + " :" + ch->getName() + "\r\n";
     invitee->enqueue_reply(msg);
     set_event_for_sending_msg(invitee->getFD(), true);
 

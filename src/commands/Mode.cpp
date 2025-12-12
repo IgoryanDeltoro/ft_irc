@@ -11,8 +11,9 @@ void Server::mode(Client *c, const Command &command)
     }
     std::string channelName = params[0];
     _parser.trim(channelName);
-    if (!channelName.empty() && !(channelName[0] == '#' || channelName[0] == '&'))
-        return;
+    // if (!channelName.empty() && !(channelName[0] == '#' || channelName[0] == '&'))
+    //     return;
+    // TODO: empty?
 
     if (!_parser.isValidChannelName(channelName))
     {
