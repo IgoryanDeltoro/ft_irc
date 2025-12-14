@@ -28,7 +28,9 @@ std::string Server::getNumericReplyText(const NumericReply &r)
 {
     switch (r)
     {
-    case RPL_NAMREPLY: return  "<channel> :<nick>";
+    case RPL_INVITING: return "<channel> <nick>";
+    case RPL_ENDOFNAMES: return "<channel> :End of /NAMES list";
+    case RPL_NAMREPLY: return "= <channel> :<nick>";
     case RPL_TOPIC: return "<channel> :<topic>";
     case ERR_KEYSET: return "<channel> :Channel key already set";
     case ERR_UNKNOWNMODE: return "<char> :is unknown mode char to me";

@@ -1,27 +1,17 @@
 #include "../../includes/Server.hpp"
 
+
 void Server::mode(Client *c, const Command &command)
 {
-    if (!isClientAuth(c))
-        return;
-    std::vector<std::string> params = command.getParams();
+    if (!isClientAuth(c)) return;
+    const std::vector<std::string> params = command.getParams();
     if (params.empty()) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
         return;
     }
-    std::string channelName = params[0];
-    // if (!channelName.empty() && !(channelName[0] == '#' || channelName[0] == '&'))
-    //     return;
-    // TODO: empty?
-
-    if (!_parser.isValidChannelName(channelName))
-    {
-        sendNumericReply(c, ERR_BADCHANMASK, "", channelName);
-        return;
-    }
-    std::string channelNameLower = _parser.ircLowerStr(channelName);
-    if (_channels.count(channelNameLower) == 0)
-    {
+    const std::string channelName = params[0];
+    const std::string channelNameLower = _parser.ircLowerStr(channelName);
+    if (_channels.count(channelNameLower) == 0) {
         sendNumericReply(c, ERR_NOSUCHCHANNEL, "", channelName);
         return;
     }
@@ -30,26 +20,19 @@ void Server::mode(Client *c, const Command &command)
         sendNumericReply(c, ERR_NOTONCHANNEL, "", channelName);
         return;
     }
-
-    if (!ch->isOperator(c->getNickLower()))
-    {
-        sendNumericReply(c, ERR_CHANOPRIVSNEEDED, "", channelName);
-        return;
-    }
-
     if (params.size() == 1)
     {
         std::string modes = ch->getAllModesString(); // собрать строку "+itk ..." с аргументами
         c->enqueue_reply(":server 324 " + c->getNick() + " " + ch->getName() + " " + modes + "\r\n");
-
-        if (!ch->getTopic().empty())
-            c->enqueue_reply(":server 332 " + c->getNick() + " " + ch->getName() + " :" + ch->getTopic() + "\r\n");
-        
         set_event_for_sending_msg(c->getFD(), true);
         return;
     }
+    if (!ch->isOperator(c->getNickLower())) {
+        sendNumericReply(c, ERR_CHANOPRIVSNEEDED, "", channelName);
+        return;
+    }
 
-    std::string modeStr = params[1];
+    const std::string modeStr = params[1];
     std::vector<std::string> args;
     for (size_t i = 2; i < params.size(); ++i)
         args.push_back(params[i]);
@@ -60,8 +43,7 @@ void Server::mode(Client *c, const Command &command)
     std::string addModeStr;
     std::string removeModeStr;
 
-    for (size_t i = 0; i < modeStr.size(); i++)
-    {
+    for (size_t i = 0; i < modeStr.size(); i++) {
         char f = modeStr[i];
         if (f == '+') {
             adding = true;
@@ -71,7 +53,6 @@ void Server::mode(Client *c, const Command &command)
             adding = false;
             continue;
         }
-
         switch (f) {
         case 'i':
             ch->setI(adding);
@@ -85,8 +66,7 @@ void Server::mode(Client *c, const Command &command)
             break;
         case 'k':
             if (adding) {
-                if (ch->isK())
-                {
+                if (ch->isK()) {
                     sendNumericReply(c, ERR_KEYSET, "", ch->getName());
                     continue;
                 }
@@ -94,13 +74,7 @@ void Server::mode(Client *c, const Command &command)
                     sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
                     continue;
                 }
-                std::string pass = args[argIndex++];
-                if (pass.empty())
-                {
-                    sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
-                    continue;
-                }
-                ch->setK(true, pass);
+                ch->setK(true, args[argIndex++]);
             }
             else {
                 ch->setK(false, "");
@@ -137,8 +111,7 @@ void Server::mode(Client *c, const Command &command)
             }
             else {
                 std::string nick = args[argIndex++];
-                if (!_parser.isValidNick(nick))
-                {
+                if (!_parser.isValidNick(nick)) {
                     sendNumericReply(c, ERR_NOSUCHNICK, nick, "");
                     continue;
                 }
@@ -148,10 +121,9 @@ void Server::mode(Client *c, const Command &command)
                     sendNumericReply(c, ERR_NOSUCHNICK, nick, "");
                     continue;
                 }
-                if (adding)
-                    ch->addOperator(user->getNickLower());
-                else
-                    ch->removeOperator(user->getNickLower());
+                if (adding && nickLower == c->getNickLower()) continue;
+                if (adding) ch->addOperator(user->getNickLower());
+                else ch->removeOperator(user->getNickLower());
             }
             break;
         default:
@@ -169,9 +141,6 @@ void Server::mode(Client *c, const Command &command)
     for (size_t i = 0; i < argIndex; i++)
         modeMsg += " " + args[i];
     modeMsg += "\r\n";
-
-    c->enqueue_reply(modeMsg);
-    set_event_for_sending_msg(c->getFD(), true);
-    ch->broadcast(c, modeMsg);
+    ch->broadcast(NULL, modeMsg);
     set_event_for_group_members(ch, true);
 }

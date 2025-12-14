@@ -32,7 +32,7 @@ void Server::join(Client *c, const Command &command)
 
 void Server::joinChannel(Client *c, const std::string &name, const std::string &password)
 {
-    std::string lower = _parser.ircLowerStr(name);
+    const std::string lower = _parser.ircLowerStr(name);
     Channel *ch = NULL;
     if (_channels.count(lower) == 0) {
         ch = new Channel(name, lower, c);
@@ -59,10 +59,13 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
             return;
         ch->addUser(c);
     }
+    const std::string joinMsg = c->buildPrefix() + " JOIN " + name + "\r\n";
+    c->enqueue_reply(joinMsg);
+    set_event_for_sending_msg(c->getFD(), true);
     if (ch->getTopic().empty()) sendNumericReply(c, RPL_NOTOPIC, "", name);
     else sendNumericReply(c, RPL_TOPIC, ch->getTopic(), name);
     sendNumericReply(c, RPL_NAMREPLY, ch->getNamesList(), name);
-    const std::string joinMsg = c->buildPrefix() + " JOIN " + name + "\r\n";
+    sendNumericReply(c, RPL_ENDOFNAMES, "", name);
     ch->broadcast(c, joinMsg);
     set_event_for_group_members(ch, true);
 }

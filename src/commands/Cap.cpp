@@ -2,10 +2,9 @@
 
 void Server::cap(Client *c, const Command &command)
 {
-    std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> params = command.getParams();
     if (params.size() == 0) return;
-    if (params[0] == "LS") 
-    {
+    if (params[0] == "LS") {
         c->enqueue_reply(":server CAP * LS :\r\n");
         set_event_for_sending_msg(c->getFD(), true);
     }

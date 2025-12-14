@@ -2,7 +2,7 @@
 
 void Server::pass(Client *c, const Command &command)
 {
-    std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> params = command.getParams();
     if (params.size() < 1) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "PASS", "");
         return;

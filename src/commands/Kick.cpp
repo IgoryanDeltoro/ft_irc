@@ -21,8 +21,12 @@ void Server::kick(Client *c, const Command &command)
             sendNumericReply(c, ERR_NEEDMOREPARAMS, "KICK", "");
             continue;
         }
-        std::string channelNameLower = _parser.ircLowerStr(channelNames[i]);
-        if (!_channels.count(channelNameLower)) {
+        if (!_parser.isValidNick(namesToKick[i])) {
+            sendNumericReply(c, ERR_ERRONEUSNICKNAME, namesToKick[i], "");
+            continue;
+        }
+        const std::string channelNameLower = _parser.ircLowerStr(channelNames[i]);
+        if (_channels.count(channelNameLower) == 0) {
             sendNumericReply(c, ERR_NOSUCHCHANNEL, "", channelNames[i]);
             continue;
         }
@@ -35,10 +39,10 @@ void Server::kick(Client *c, const Command &command)
             sendNumericReply(c, ERR_CHANOPRIVSNEEDED, "", channelNames[i]);
             continue;
         }
-        std::string nameToKickLower = _parser.ircLowerStr(namesToKick[i]);
+        const std::string nameToKickLower = _parser.ircLowerStr(namesToKick[i]);
         Client *userToKick = ch->getUser(nameToKickLower);
         if (!userToKick) continue;
-        std::string outMessage = ":" + c->buildPrefix() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
+        const std::string outMessage = ":" + c->buildPrefix() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
         ch->broadcast(NULL, outMessage);
         set_event_for_group_members(ch, true);
         userToKick->removeChannel(channelNameLower);

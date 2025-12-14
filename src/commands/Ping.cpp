@@ -2,15 +2,12 @@
 
 void Server::ping(Client *c, const Command &command)
 {
-    std::vector<std::string> params = command.getParams();
-    if (params.size() < 1)
-    {
+    const std::vector<std::string> params = command.getParams();
+    if (params.size() < 1) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "PING", "");
         return;
     }
-
-    std::string arg = command.getParams()[0];
-
+    const std::string arg = command.getParams()[0];
     c->enqueue_reply("PONG " + arg + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }
