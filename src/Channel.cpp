@@ -113,7 +113,7 @@ bool Channel::hasTopic() const { return !_topic.empty(); }
 
 const std::string &Channel::getTopicSetter() const { return _topicSetter; }
 
-const time_t &Channel::getTopicTimestamp() const { return _topicTimestamp; }
+const int &Channel::getTopicTimestamp() const { return _topicTimestamp; }
 
 void Channel::setTopic(const std::string &topic, const std::string &setter) {
     _topic = topic;
