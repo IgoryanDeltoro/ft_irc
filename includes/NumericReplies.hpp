@@ -3,6 +3,7 @@
 
 enum NumericReply
 {
+    RPL_CHANNELMODEIS = 324,
     RPL_NOTOPIC = 331,
     RPL_TOPIC = 332,
     RPL_INVITING = 341,

@@ -28,6 +28,7 @@ std::string Server::getNumericReplyText(const NumericReply &r)
 {
     switch (r)
     {
+    case RPL_CHANNELMODEIS: return "<channel> <nick>";
     case RPL_INVITING: return "<channel> <nick>";
     case RPL_ENDOFNAMES: return "<channel> :End of /NAMES list";
     case RPL_NAMREPLY: return "= <channel> :<nick>";

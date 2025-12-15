@@ -74,6 +74,7 @@ class Server {
         void sendNumericReply(Client *c, NumericReply err, const std::string &arg, const std::string &channel);
         void sendWelcome(Client *c);
         std::string getTime();
+        void applyChannelMode(Client *c, Channel *channel, char f, bool adding, std::vector<std::string> &args, size_t &argIndex, std::string &addModeStr, std::string &removeModeStr, std::vector<std::string> &addModeArgs, std::vector<std::string> &removeModeArgs, int &oLimit);
 };
 
 #endif
