@@ -2,40 +2,28 @@
 
 void Server::join(Client *c, const Command &command)
 {
-    if (!isClientAuth(c))
-        return;
-
-    std::vector<std::string> params = command.getParams();
-    if (params.empty())
-    {
-        sendError(c, ERR_NEEDMOREPARAMS, "JOIN", "");
+    if (!isClientAuth(c)) return;
+    const std::vector<std::string> params = command.getParams();
+    if (params.empty()) {
+        sendNumericReply(c, ERR_NEEDMOREPARAMS, "JOIN", "");
         return;
     }
-
-    std::string channelsRaw = params[0];
-    _parser.trim(channelsRaw);
-    std::vector<std::string> channelNames = _parser.splitByComma(channelsRaw);
+    const std::string channelsRaw = params[0];
+    const std::vector<std::string> channelNames = _parser.splitByComma(channelsRaw);
     std::vector<std::string> keys;
-
-    if (params.size() > 1)
-    {
-        std::string keysRaw = params[1];
-        _parser.trim(keysRaw);
+    if (params.size() > 1) {
+        const std::string keysRaw = params[1];
         keys = _parser.splitByComma(keysRaw);
     }
-
-    for (size_t i = 0; i < channelNames.size(); i++)
-    {
-        std::string channelName = channelNames[i];
-        std::string key = (i < keys.size() ? keys[i] : "");
-        if (!_parser.isValidChannelName(channelName))
-        {
-            sendError(c, ERR_NOSUCHCHANNEL, "", channelName);
+    for (size_t i = 0; i < channelNames.size(); i++) {
+        const std::string channelName = channelNames[i];
+        const std::string key = (i < keys.size() ? keys[i] : "");
+        if (!_parser.isValidChannelName(channelName)) {
+            sendNumericReply(c, ERR_BADCHANMASK, "", channelName);
             continue;
         }
-        if (c->getChannelSize() >= 10)
-        {
-            sendError(c, ERR_TOOMANYCHANNELS, "", channelName);
+        if (c->getChannelSize() >= 10) {
+            sendNumericReply(c, ERR_TOOMANYCHANNELS, "", channelName);
             continue;
         }
         joinChannel(c, channelName, key);
@@ -44,7 +32,7 @@ void Server::join(Client *c, const Command &command)
 
 void Server::joinChannel(Client *c, const std::string &name, const std::string &password)
 {
-    std::string lower = _parser.ircLowerStr(name);
+    const std::string lower = _parser.ircLowerStr(name);
     Channel *ch = NULL;
     if (_channels.count(lower) == 0) {
         ch = new Channel(name, lower, c);
@@ -53,57 +41,31 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
         }
         _channels[lower] = ch;
     }
-    else
-    {
+    else {
         ch = _channels[lower];
-
         if (ch->isI() && !ch->isInvited(c->getNickLower())) {
-            sendError(c, ERR_INVITEONLYCHAN, "", name);
+            sendNumericReply(c, ERR_INVITEONLYCHAN, "", name);
             return;
         }
         if (ch->isK() && ch->getPassword() != password) {
-            sendError(c, ERR_BADCHANNELKEY, "", name);
+            sendNumericReply(c, ERR_BADCHANNELKEY, "", name);
             return;
         }
-        if (ch->isL() && ch->getUserLimit() > 0 && (int)ch->getUsers().size() >= ch->getUserLimit())
-        {
-            sendError(c, ERR_CHANNELISFULL, "", name);
+        if (ch->isL() && ch->getUserLimit() > 0 && (int)ch->getUsers().size() >= ch->getUserLimit()) {
+            sendNumericReply(c, ERR_CHANNELISFULL, "", name);
             return;
         }
         if (ch->isUser(c->getNickLower()))
             return;
         ch->addUser(c);
     }
-    
-    if (ch->getTopic().empty())
-        c->enqueue_reply(":server 331 " + c->getNick() + " " + name + " :No topic is set\r\n");
-    else
-        c->enqueue_reply(":server 332 " + c->getNick() + " " + name + " :" + ch->getTopic() + "\r\n");
+    const std::string joinMsg = c->buildPrefix() + " JOIN " + name + "\r\n";
+    c->enqueue_reply(joinMsg);
     set_event_for_sending_msg(c->getFD(), true);
-
-    std::string namesList = getNamesList(c, ch);
-    c->enqueue_reply(namesList);
-    c->enqueue_reply(":server 366 " + c->getNick() + " " + name + " :End of /NAMES list.\r\n");
-    set_event_for_sending_msg(c->getFD(), true);
-
-    std::string joinMsg = c->buildPrefix() + " JOIN " + name + "\r\n";
+    if (ch->getTopic().empty()) sendNumericReply(c, RPL_NOTOPIC, "", name);
+    else sendNumericReply(c, RPL_TOPIC, ch->getTopic(), name);
+    sendNumericReply(c, RPL_NAMREPLY, ch->getNamesList(), name);
+    sendNumericReply(c, RPL_ENDOFNAMES, "", name);
     ch->broadcast(c, joinMsg);
     set_event_for_group_members(ch, true);
-}
-
-std::string Server::getNamesList(Client *c, Channel *ch)
-{
-    std::string nick = c->getNick();
-    std::string namesList = ":server 353 " + nick + " = " + ch->getName() + " :";
-    const std::map<std::string, Client *> &users = ch->getUsers();
-    for (std::map<std::string, Client *>::const_iterator it = users.begin(); it != users.end(); ++it)
-    {
-        Client *user = it->second;
-        std::string prefix;
-        if (ch->isOperator(user->getNickLower()))
-            prefix = "@";
-        namesList += prefix + user->getNick() + " ";
-    }
-    namesList += "\r\n";
-    return namesList;
 }

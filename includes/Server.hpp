@@ -41,19 +41,19 @@ class Server {
         void send_msg_to(Client *, int fd);
         void process_line(Client *, std::string);
         void close_client(int);
-        std::string getErrorText(const Error &error);
+        std::string getNumericReplyText(const NumericReply &r);
         // ssize_t send_message_to_client(int, std::string);
         void set_event_for_group_members(Channel *ch, bool doSend);
         void set_event_for_sending_msg(int fd, bool);
         void check_timeouts();
         void removeClientFromAllChannels(Client *c);
 
+        Channel *getChannel(const std::string &name);
     public:
         Server(const std::string &port, const std::string &password);
         ~Server();
 
         void run();
-
         void help(Client *);
         void pass(Client *, const Command &);
         void nick(Client *, const Command &);
@@ -72,10 +72,10 @@ class Server {
         bool isClientAuth(Client *);
         Client *getClientByNick(const std::string &nick);
 
-        void sendError(Client *c, Error err, const std::string &arg, const std::string &channel);
+        void sendNumericReply(Client *c, NumericReply err, const std::string &arg, const std::string &channel);
         void sendWelcome(Client *c);
-        std::string getNamesList(Client *c, Channel *ch);
         std::string getTime();
+        void applyChannelMode(Client *c, Channel *channel, char f, bool adding, std::vector<std::string> &args, size_t &argIndex, std::string &addModeStr, std::string &removeModeStr, std::vector<std::string> &addModeArgs, std::vector<std::string> &removeModeArgs, int &oLimit);
 };
 
 #endif

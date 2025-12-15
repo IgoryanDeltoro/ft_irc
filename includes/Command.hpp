@@ -6,6 +6,7 @@
 
 enum Commands
 {
+    NOT_VALID,
     NOT_FOUND,
     HELP,
     PASS,
@@ -20,9 +21,7 @@ enum Commands
     QUIT,
     LIST,
     CAP,
-    PING,
-    // PART
-    //    NOTICE
+    PING
 };
 
 class Command

@@ -330,181 +330,94 @@ void Server::close_client(int fd)
 
 void Server::removeClientFromAllChannels(Client *c)
 {
-    std::string nick = c->getNickLower();
+    const std::string nick = c->getNickLower();
+    std::set<std::string> channels = c->getChannels();
 
-    for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end(); ++it)
-    {
-        Channel *ch = it->second;
+    for (std::set<std::string>::iterator it = channels.begin(); it != channels.end(); ++it) {
+        std::map<std::string, Channel *>::iterator chIt = _channels.find(*it);
+        if (chIt == _channels.end())
+            continue;
+
+        Channel *ch = chIt->second;
+
         ch->removeOperator(nick);
         ch->removeUser(nick);
         ch->removeInvite(nick);
 
         if (ch->getUsers().empty())
         {
-            _channels.erase(it);
             delete ch;
-        } else {
-            std::string outMessage = ":" + c->buildPrefix() + " QUIT " + " :" + "TODO message when QUIT!!!!!!!!!!!!!!!!!!!!" + "\r\n";
-            ch->broadcast(c, outMessage);
-            set_event_for_group_members(ch, true);
+            _channels.erase(chIt);
         }
     }
     // TODO: Broadcast? когда клиент отсоединяется
 }
 
-void Server::sendError(Client *c, Error err, const std::string &arg, const std::string &channel)
-{
-    std::string message = getErrorText(err);
-    std::string nick = c->getNick().empty() ? "*" : c->getNick();
-
-    size_t pos;
-
-    if ((pos = message.find("<command>")) != std::string::npos)
-        message.replace(pos, 9, arg);
-    else if ((pos = message.find("<nick>")) != std::string::npos)
-        message.replace(pos, 6, arg);
-    else if ((pos = message.find("<char>")) != std::string::npos)
-        message.replace(pos, 6, arg);
-    else if ((pos = message.find("<user>")) != std::string::npos)
-        message.replace(pos, 6, arg);
-    else if ((pos = message.find("<target>")) != std::string::npos)
-        message.replace(pos, 8, arg);
-    else if ((pos = message.find("<mask>")) != std::string::npos)
-        message.replace(pos, 6, arg);
-
-    if ((pos = message.find("<channel>")) != std::string::npos)
-        message.replace(pos, 9, channel);
-
-    std::string s;
-    std::stringstream out1;
-    out1 << err;
-    s = out1.str();
-
-    c->enqueue_reply(RED ":server " + s + " " + nick + " " + message + RESET "\r\n");
-    set_event_for_sending_msg(c->getFD(), true);
-}
-
-std::string Server::getErrorText(const Error &error)
-{
-    switch (error)
-    {
-    case ERR_KEYSET:
-        return "<channel> :Channel key already set";
-    case ERR_UNKNOWNMODE:
-        return "<char> :is unknown mode char to me";
-    case ERR_USERONCHANNEL:
-        return "<user> <channel> :is already on channel";
-    case ERR_USERNOTINCHANNEL:
-        return "<nick> <channel> :They aren't on that channel";
-    case ERR_CHANOPRIVSNEEDED:
-        return "<channel> :You're not channel operator";
-    case RPL_NOTOPIC:
-        return "<channel> :No topic is set";
-    case ERR_NOTONCHANNEL:
-        return "<channel> :You're not on that channel";
-    case ERR_NOTREGISTERED:
-        return ": User has not registration";
-    case ERR_BANNEDFROMCHAN:
-        return "<channel> :Cannot join channel (+b)";
-    case ERR_INVITEONLYCHAN:
-        return "<channel> :Cannot join channel (+i)";
-    case ERR_BADCHANNELKEY:
-        return "<channel> :Cannot join channel (+k)";
-    case ERR_CHANNELISFULL:
-        return "<channel> :Cannot join channel (+l)";
-    case ERR_BADCHANMASK:
-        return "<channel> :Invalid channel name";
-    case ERR_NOSUCHCHANNEL:
-        return "<channel> :No such channel";
-    case ERR_TOOMANYCHANNELS:
-        return "<channel> :You have joined too many channels";
-    case ERR_PASSALREADY:
-        return ":Password already success";
-    case ERR_NEEDPASS:
-        return ":Server PASS required ";
-    case ERR_PASSWDMISMATCH:
-        return ":Password incorrect"; //"<client> :Password incorrect"
-    case ERR_ALREADYREGISTRED:
-        return ":You may not reregister";
-    case ERR_NEEDMOREPARAMS:
-        return "<command> :Not enough parameters";
-    case ERR_NONICKNAMEGIVEN:
-        return ":No nickname given";
-    case ERR_ERRONEUSNICKNAME:
-        return "<nick> :Erroneus nickname";
-    case ERR_NICKNAMEINUSE:
-        return "<nick> :Nickname is already in use";
-    case ERR_NORECIPIENT:
-        return "<nick> :No recipient given (PRIVMSG)";
-    case ERR_NOTEXTTOSEND:
-        return "<nick> :No text to send";
-    case ERR_CANNOTSENDTOCHAN:
-        return "<channel> :Cannot send to channel";
-    case ERR_NOTOPLEVEL:
-        return "<mask> :No toplevel domain specified"; // Если клиент отправляет PRIVMSG на некорректный канал/хост.
-    case ERR_TOOMANYTARGETS:
-        return "<target> :Duplicate recipients. No message delivered"; //<target> — это первый из дублирующихся или превышающих лимит получателей.
-    case ERR_NOSUCHNICK:
-        return "<nick> :No such nick/channel";
-    default:
-        return ":Error";
-    }
-}
-
 void Server::process_line(Client *c, std::string line)
 {
     std::cout << "line: " << line << std::endl;
+    if (line.empty() || line.size() > 510) return;
     _parser.trim(line);
-    if (line.empty() || line.size() > 510)
-    {
-        return;
-    }
-
+    if (line.empty()) return;
     Command cmnd = _parser.parse(line);
-
-    if (cmnd.getCommand() == NOT_FOUND)
-    {
-        std::string nick = c->getNick().empty() ? "*" : c->getNick();
-        c->enqueue_reply(RED ": server 421 " + nick + " " + cmnd.getCommandStr() + " : Unknown command" + RESET "\r\n");
-
-        set_event_for_sending_msg(c->getFD(), true);
+    if (cmnd.getCommand() == NOT_VALID) return;
+    if (!cmnd.getPrefix().empty()) {
+        if (!c->getRegStatus()) return;
+        if (cmnd.getPrefix() != c->getNick()) return;
     }
-    else if (cmnd.getCommand() == HELP)
-        help(c);
-    else if (cmnd.getCommand() == PASS)
-        pass(c, cmnd);
-    else if (cmnd.getCommand() == NICK)
-        nick(c, cmnd);
-    else if (cmnd.getCommand() == USER)
-        user(c, cmnd);
-    else if (cmnd.getCommand() == JOIN)
-        join(c, cmnd);
-    else if (cmnd.getCommand() == MODE)
-        mode(c, cmnd);
-    else if (cmnd.getCommand() == KICK)
-        kick(c, cmnd);
-    else if (cmnd.getCommand() == TOPIC)
-        topic(c, cmnd);
-    else if (cmnd.getCommand() == INVITE)
-        invite(c, cmnd);
-    else if (cmnd.getCommand() == CAP)
-        cap(c, cmnd);
-    else if (cmnd.getCommand() == PRIVMSG)
-        privmsg(c, cmnd);
-    else if (cmnd.getCommand() == PING)
-        ping(c, cmnd);
+    if (cmnd.getCommand() == NOT_FOUND) { sendNumericReply(c, ERR_UNKNOWNCOMMAND, cmnd.getCommandStr(), ""); return; }
+    switch (cmnd.getCommand()) {
+        case HELP: help(c); break;
+        case PASS: pass(c, cmnd); break;
+        case NICK: nick(c, cmnd); break;
+        case USER: user(c, cmnd); break;
+        case JOIN: join(c, cmnd); break;
+        case MODE: mode(c, cmnd); break;
+        case KICK: kick(c, cmnd); break;
+        case TOPIC: topic(c, cmnd); break;
+        case INVITE: invite(c, cmnd); break;
+        case CAP: cap(c, cmnd); break;
+        case PRIVMSG: privmsg(c, cmnd); break;
+        case PING: ping(c, cmnd); break;
+        default: break;
+    }
 }
 
 void Server::sendWelcome(Client *c)
 {
     std::string nick = c->getNick();
 
-    c->enqueue_reply(":server 001 " + nick + " :" + YELLOW + "Welcome to IRC server! " + RESET + "\r\n");
+    std::string welcome = GREEN;
+    welcome.append("__        _______ _     ____ ___  __  __ _____   _ \n");
+    welcome.append(GREEN);
+    welcome.append("\\ \\      / / ____| |   / ___/ _ \\|  \\/  | ____| | |\n");
+    welcome.append(GREEN);
+    welcome.append(" \\ \\ /\\ / /|  _| | |  | |  | | | | |\\/| |  _|   | |\n");
+    welcome.append(GREEN);
+    welcome.append("  \\ V  V / | |___| |__| |__| |_| | |  | | |___  |_|\n");
+    welcome.append(GREEN);
+    welcome.append("   \\_/\\_/  |_____|_____\\____\\___/|_|  |_|_____| (_)");
+    welcome.append(RESET);
+
+    std::string motd = BLUE;
+    motd.append("Welcome to our IRC server!\n");
+    motd.append(BLUE);
+    motd.append("Type ");
+    motd.append(GREEN);
+    motd.append("HELP");
+    motd.append(BLUE);
+    motd.append(" to see all available commands.");
+    motd.append(RESET);
+
+    c->enqueue_reply(":server 001 " + nick + " :" + welcome + "\r\n");
     c->enqueue_reply(":server 002 " + nick + " :Your host is server\r\n");
     c->enqueue_reply(":server 003 " + nick + " :This server was created today\r\n");
-    c->enqueue_reply(":server 375 " + nick + " :You can use " + BLUE + "HELP" + RESET + " command\r\n");
-    c->enqueue_reply(":server 372 " + nick + " :Welcome to our IRC network!\r\n");
-    c->enqueue_reply(":server 376 " + nick + " :End of /MOTD command\r\n");
+
+    c->enqueue_reply(":server 375 " + nick + " :- Message of the Day -\r\n");
+    c->enqueue_reply(":server 372 " + nick + " :- " + motd + "\r\n");
+
+    c->enqueue_reply(":server 376 " + nick + " :Have a wonderful chat session! 😊\r\n");
+
     set_event_for_sending_msg(c->getFD(), true);
 }
 
@@ -549,4 +462,14 @@ void Server::set_event_for_group_members(Channel *ch, bool doSend)
             }
         }
     }
+}
+
+Channel *Server::getChannel(const std::string &name) {
+    std::map<std::string, Channel*>::iterator it;
+    for (it = _channels.begin(); it != _channels.end(); it++)
+    {
+        if (it->second && it->second->getNameLower() == name)
+            return it->second;
+    }
+    return NULL;
 }

@@ -2,27 +2,22 @@
 
 void Server::help(Client *c)
 {
-    std::string pass = "command PASS <password>\n";
-    std::string nick = "command NICK <nickname>\n";
-    std::string user = "command USER <username> <hostname> <servername> :<realname>\n";
-    std::string join = "command JOIN #channel key\n";
-    std::string mode = "command MODE <#channel> {[+|-]|o|p|s|i|t|n|b|v} [<limit>] [<user>]\n";
-    std::string topic = "command TOPIC <#channel>\n";
-    std::string topic2 = "command TOPIC <#channel> :<topic>\n";
-    std::string list = "command LIST <#channel> [<topic>]\n";
-    std::string invite = "command INVITE <nickname> <#channel>\n";
-    std::string kick = "command KICK <#channel> <user> [<comment>]\n";
-    std::string privmsg = "command PRIVMSG <receiver>{,<receiver>} :<text to be sent>\n";
+    std::string msg;
 
-    if (!c->getRegStatus())
-        c->enqueue_reply(YELLOW + pass + nick + user + RESET "\r\n");
-    else
-        c->enqueue_reply(YELLOW + join + mode + topic + list + invite + kick + privmsg + RESET "\r\n");
+    msg += YELLOW "Available commands:\n" RESET;
+    msg += BLUE "----------------------------------------\n" RESET;
+    msg += GREEN "PASS" RESET " <password>\n";
+    msg += GREEN "NICK" RESET " <nickname>\n";
+    msg += GREEN "USER" RESET " <username> 0 * :<realname>\n";
+    msg += GREEN "JOIN" RESET " <#channel> [key]\n";
+    msg += GREEN "MODE" RESET " <#channel> {[+|-] flags} [params]\n";
+    msg += GREEN "TOPIC" RESET " <#channel> [:topic]\n";
+    msg += GREEN "INVITE" RESET " <nickname> <#channel>\n";
+    msg += GREEN "KICK" RESET " <#channel> <user> [:comment]\n";
+    msg += GREEN "PRIVMSG" RESET " <target> :<text>\n";
+    msg += BLUE "----------------------------------------\n" RESET;
 
+    std::string nick = c->getNick().empty() ? "*" : c->getNick();
+    c->enqueue_reply(":server NOTICE " + nick + " :" + msg + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
-    
-    //     send_message_to_client(c->getFD(), ":" + pass + nick + user + "\r\n");
-    // else
-    //     send_message_to_client(c->getFD(), ":" + join + mode + topic + topic2 + list + invite + kick + privmsg + "\r\n");
-
 }

@@ -1,6 +1,6 @@
 #include "../includes/Command.hpp"
 
-Command::Command(): _command(NOT_FOUND) {};
+Command::Command() : _command(NOT_VALID) {};
 Command::~Command() {};
 
 void Command::setPrefix(const std::string &p) { _prefix = p; }

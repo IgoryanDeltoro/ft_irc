@@ -13,6 +13,7 @@ SRC =	$(SRC_DIRS)/main.cpp			\
 		$(SRC_DIRS)/Command.cpp			\
 		$(SRC_DIRS)/Channel.cpp			\
 		$(SRC_DIRS)/Utils.cpp			\
+		$(SRC_DIRS)/reply.cpp			\
 		$(SRC_DIRS)/commands/Cap.cpp	\
 		$(SRC_DIRS)/commands/Help.cpp	\
 		$(SRC_DIRS)/commands/Invite.cpp	\
