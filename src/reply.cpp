@@ -32,7 +32,7 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case RPL_INVITING: return "<channel> <nick>";
     case RPL_ENDOFNAMES: return "<channel> :End of /NAMES list";
     case RPL_NAMREPLY: return "= <channel> :<nick>";
-    case RPL_TOPIC: return "<channel> :<topic>";
+    case RPL_TOPIC: return "<channel> :<nick>";
     case ERR_KEYSET: return "<channel> :Channel key already set";
     case ERR_UNKNOWNMODE: return "<char> :is unknown mode char to me";
     case ERR_USERONCHANNEL: return "<user> <channel> :is already on channel";

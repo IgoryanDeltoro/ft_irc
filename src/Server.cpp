@@ -332,25 +332,32 @@ void Server::removeClientFromAllChannels(Client *c)
 {
     const std::string nick = c->getNickLower();
     std::set<std::string> channels = c->getChannels();
-
+    std::set<Client *> clients;
     for (std::set<std::string>::iterator it = channels.begin(); it != channels.end(); ++it) {
         std::map<std::string, Channel *>::iterator chIt = _channels.find(*it);
         if (chIt == _channels.end())
             continue;
-
         Channel *ch = chIt->second;
-
         ch->removeOperator(nick);
         ch->removeUser(nick);
         ch->removeInvite(nick);
-
-        if (ch->getUsers().empty())
-        {
+        if (ch->getUsers().empty()) {
             delete ch;
             _channels.erase(chIt);
+        } else {
+            for (std::map<std::string, Client*>::iterator it = ch->getUsers().begin(); it != ch->getUsers().end() ; ++it) {
+                clients.insert(it->second);
+            }
         }
     }
     // TODO: Broadcast? когда клиент отсоединяется
+
+    std::string outMessage = ":" + c->buildPrefix() + " QUIT\r\n";// " + " :" + "TODO message when QUIT!!!!!!!!!!!!!!!!!!!!" + "
+    for (std::set<Client *>::iterator it = clients.begin(); it != clients.end() ; ++it) {
+        Client *client = *it;
+        client->enqueue_reply(outMessage);
+        set_event_for_sending_msg(client->getFD(), true);
+    }
 }
 
 void Server::process_line(Client *c, std::string line)

@@ -19,7 +19,11 @@ void Server::privmsg(Client *c, const Command &cmd) {
                 sendNumericReply(c, ERR_NOSUCHNICK, "", ch_mem[i]);
                 return;
             };
-
+            if (channel->second->isUser(ch_mem[i]))
+            {
+                sendNumericReply(c, ERR_USERNOTINCHANNEL, "", ch_mem[i]);
+                return;
+            }
             channel->second->broadcast(c, ":" + c->getNick() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
             set_event_for_group_members(channel->second, true);
         } else {
