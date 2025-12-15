@@ -19,7 +19,7 @@ void Server::sendNumericReply(Client *c, NumericReply r, const std::string &arg,
     std::stringstream out;
     out << r;
     num = out.str();
-
+    std::cout << RED "sending " << num << RESET " to client: " << nick << " :" + message + "\n";
     c->enqueue_reply( ":server " + num + " " + nick + " " + message + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }

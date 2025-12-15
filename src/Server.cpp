@@ -330,19 +330,25 @@ void Server::close_client(int fd)
 
 void Server::removeClientFromAllChannels(Client *c)
 {
-    std::string nick = c->getNickLower();
+    const std::string nick = c->getNickLower();
+    std::set<std::string> channels = c->getChannels();
 
-    for (std::map<std::string, Channel *>::iterator it = _channels.begin(); it != _channels.end(); ++it)
-    {
-        Channel *ch = it->second;
+    for (std::set<std::string>::iterator it = channels.begin(); it != channels.end(); ++it) {
+        std::map<std::string, Channel *>::iterator chIt = _channels.find(*it);
+        if (chIt == _channels.end())
+            continue;
+
+        Channel *ch = chIt->second;
+
         ch->removeOperator(nick);
         ch->removeUser(nick);
         ch->removeInvite(nick);
-        // if (ch->getUsers().empty())
-        // {
-        //     _channels.erase(it);
-        //     delete ch;
-        // }
+
+        if (ch->getUsers().empty())
+        {
+            delete ch;
+            _channels.erase(chIt);
+        }
     }
     // TODO: Broadcast? когда клиент отсоединяется
 }
@@ -456,4 +462,14 @@ void Server::set_event_for_group_members(Channel *ch, bool doSend)
             }
         }
     }
+}
+
+Channel *Server::getChannel(const std::string &name) {
+    std::map<std::string, Channel*>::iterator it;
+    for (it = _channels.begin(); it != _channels.end(); it++)
+    {
+        if (it->second && it->second->getNameLower() == name)
+            return it->second;
+    }
+    return NULL;
 }

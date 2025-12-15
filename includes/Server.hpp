@@ -48,6 +48,7 @@ class Server {
         void check_timeouts();
         void removeClientFromAllChannels(Client *c);
 
+        Channel *getChannel(const std::string &name);
     public:
         Server(const std::string &port, const std::string &password);
         ~Server();

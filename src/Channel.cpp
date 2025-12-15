@@ -97,7 +97,7 @@ std::string Channel::getAllModesString() const
     if (_k) mode += "k";
     if (_l) mode += "l";
 
-    if (!mode.empty()) mode = " +" + mode;
+    if (!mode.empty()) mode = "+" + mode;
     else return "";
 
     if (_k) mode += " " + _password;
@@ -118,7 +118,6 @@ const time_t &Channel::getTopicTimestamp() const { return _topicTimestamp; }
 void Channel::setTopic(const std::string &topic, const std::string &setter) {
     _topic = topic;
     _topicSetter = setter;
-    _topicTimestamp = std::time(NULL);
 }
 
 const std::string Channel::getNamesList() const

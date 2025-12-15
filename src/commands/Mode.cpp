@@ -50,6 +50,9 @@ void Server::mode(Client *c, const Command &command)
     for (size_t i = 0; i < addModeArgs.size(); i++) modeMsg += " " + addModeArgs[i];
     for (size_t i = 0; i < removeModeArgs.size(); i++) modeMsg += " " + removeModeArgs[i];
     modeMsg += "\r\n";
+
+    std::cout << YELLOW "sending mode changing:" RESET << modeMsg;
+
     ch->broadcast(NULL, modeMsg);
     set_event_for_group_members(ch, true);
 }
