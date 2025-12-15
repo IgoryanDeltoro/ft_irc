@@ -24,7 +24,7 @@ class Parser {
         Command parse(std::string &) const;
 
         void trim(std::string &) const;
-        std::vector<std::string> splitByComma(const std::string &);
+        const std::vector<std::string> splitByComma(const std::string &);
 
         Commands mapCommand(const std::string &cmd) const;
         bool isValidNick(const std::string &) const;

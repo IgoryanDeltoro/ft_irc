@@ -37,7 +37,8 @@ class Client {
         const std::string       &getUserName() const;
         const std::string       &getRealName() const;
         int                     getChannelSize() const;
-        std::deque<time_t>      &getCmdTimeStamps();
+        const std::set<std::string> &getChannels() const;
+        std::deque<time_t> &getCmdTimeStamps();
 
         std::string             &getRecvBuff();
         const bool              &getRegStatus() const;

@@ -91,28 +91,22 @@ Client *Channel::getUser(const std::string &nick)
 
 std::string Channel::getAllModesString() const
 {
-    std::string mode = "+";
+    std::string mode;
     if (_i) mode += "i";
     if (_t) mode += "t";
     if (_k) mode += "k";
     if (_l) mode += "l";
 
-    std::string args;
-    if (_k) args += " " + _password;
+    if (!mode.empty()) mode = "+" + mode;
+    else return "";
+
+    if (_k) mode += " " + _password;
     if (_l) {
         std::stringstream ss;
         ss << _userLimit;
-        args += " " + ss.str();
+        mode += " " + ss.str();
     }
-
-    // for (std::map<std::string, Client *>::const_iterator it = _users.begin(); it != _users.end(); ++it)
-    // {
-    //     Client *clien = it->second;
-    //     if (isOperator(clien->getNickLower()))
-    //         args += " " + clien->getNick();
-    // }
-
-    return mode; //+ args;
+    return mode;
 }
 
 bool Channel::hasTopic() const { return !_topic.empty(); }
@@ -124,5 +118,16 @@ const int &Channel::getTopicTimestamp() const { return _topicTimestamp; }
 void Channel::setTopic(const std::string &topic, const std::string &setter) {
     _topic = topic;
     _topicSetter = setter;
-    _topicTimestamp = time(NULL);
+}
+
+const std::string Channel::getNamesList() const
+{
+    std::string list;
+    for (std::map<std::string, Client *>::const_iterator it = _users.begin(); it != _users.end(); ++it) {
+        Client *user = it->second;
+        std::string prefix;
+        if (isOperator(user->getNickLower())) prefix = "@";
+        list += prefix + user->getNick() + " ";
+    }
+    return list;
 }

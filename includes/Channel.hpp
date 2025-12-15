@@ -77,6 +77,8 @@ class Channel {
         const std::string &getTopicSetter() const;
         const int &getTopicTimestamp() const;
         void setTopic(const std::string &topic, const std::string &setter);
+
+        const std::string getNamesList() const;
 };
 
 #endif
