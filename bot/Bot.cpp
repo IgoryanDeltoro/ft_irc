@@ -1,7 +1,7 @@
 #include "Bot.hpp"
     
 Bot::Bot(const std::string &ip, const std::string &port, const std::string &password) : _ip(ip),  _port(port), 
-  _password(password), _nick("irc_bot"), _bot_name("irc_bot"), _connected_fd(-1), _ping_time(time(NULL)), _ping_wind(120) {
+  _password(password), _nick("ircBot"), _connected_fd(-1), _ping_time(time(NULL)), _ping_wind(120) {
 
   _connected_fd = getsocketfd();
   if (_connected_fd == -1) throw std::runtime_error("Error: connection");
@@ -35,32 +35,36 @@ int Bot::getsocketfd() {
 void Bot::run() {
  
   if (!_password.empty()) {
-    _buffer = "PASS " + _password + "\r\n" + "NICK " + _nick + "\r\n" +"USER " + _password + " * 0 :" + _bot_name;
+    std::string pass = "PASS " + _password + "\r\n"; 
+    _send_buffer.append(pass + "NICK " + _nick + "\r\nUSER " + _nick + " * 0 :" + _nick + "\r\n");
     _pfd.events |= POLLOUT;
   }
 
   
   while (1) {
-    int ret = poll(&_pfd, 1, 1000);
+    int ready = poll(&_pfd, 1, 1000);
 
     int curr_time = time(NULL);
     if (curr_time - _ping_time > _ping_wind) {
-      _buffer = "PING tolsun.oulu.fi";
+      _send_buffer = "PING tolsun.oulu.fi\r\n";
       _pfd.events |= POLLOUT;
       _ping_time = curr_time;
     }
 
-    if (ret == 0) continue;
-    if (ret < 0) throw std::runtime_error("poll error");
-
-    if (_pfd.revents & (POLLERR | POLLHUP | POLLNVAL))
-      break;
-    else if (_pfd.revents & POLLIN) {
-      if (read_income_msg() == -1) break;
+    if (ready < 0) {
+      if (errno == EINTR) continue;
+      throw std::runtime_error("poll faild");
     }
-      
-    else if (_pfd.revents & POLLOUT)
-      send_message_to_server();
+
+    if (_pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) {
+      break;
+    } else {
+      if (_pfd.revents & POLLIN) {
+        if (read_income_msg() == -1) break;
+      } else if (_pfd.revents & POLLOUT) {
+        send_message_to_server();
+      }
+    }
   }
 }
 
@@ -75,12 +79,12 @@ int Bot::read_income_msg() {
     if (bytes == 0)
       return -1;
 
-    _buffer.append(buf, bytes);
+    _recv_buffer.append(buf, bytes);
 
     size_t pos;
-    while ((pos = _buffer.find("\n")) != std::string::npos) {
-      std::string line = _buffer.substr(0, pos);
-      _buffer.erase(0, pos + 1);
+    while ((pos = _recv_buffer.find("\n")) != std::string::npos) {
+      std::string line = _recv_buffer.substr(0, pos);
+      _recv_buffer.erase(0, pos + 1);
 
       if (!line.empty() && line[line.size() - 1] == '\r')
         line.erase(line.size() - 1);
@@ -92,53 +96,91 @@ int Bot::read_income_msg() {
 }
 
 void Bot::send_message_to_server() {
-  while (!_buffer.empty()) {
-    std::string msg = _buffer + "\r\n";
-    ssize_t n = send(_connected_fd, msg.c_str(), msg.size(), 0);
-    _buffer.clear();
-    _pfd.events = POLLIN;
+  while (!_send_buffer.empty()) {
+
+    ssize_t  n = send(_connected_fd, _send_buffer.c_str(), _send_buffer.size(), 0);
+    if (n < 0) break;
+
+    if (static_cast<size_t>(n) < _send_buffer.size()) {
+      _send_buffer.erase(0, n);
+      break;
+    }
+    
+    _send_buffer.erase(0, n);
   }
+
+  _pfd.events = POLLIN;
+  if (!_send_buffer.empty())  _pfd.events |= POLLOUT;
 }
 
-void Bot::handleLine(const std::string& line) {
+std::map<std::string, std::string> Bot::parse_incomming_msg(const std::string &str) {
+  std::map<std::string, std::string> t;
+  std::stringstream ss(str);
+  std::string s;
+  bool flag = false;
+
+  while (ss >> s) {
+    if (s[0] == '#'|| s[0] == '&')
+      t["channel"] = s;
+    else if (s.find(":") != std::string::npos && s.find("!") != std::string::npos) {
+      t["receiver"] =  str.substr(str.find(":") + 1, str.find("!") - 1);
+      flag = true;
+    } else if (s == "INVITE" || s == "PRIVMSG") {
+      t["cmd"] = s;
+    } else if (s.find(":") != std::string::npos && flag) {
+      t["msg"] = s.substr(s.find(" :") + 2);
+      flag = false;
+    }
+  }
+  return t;
+}
+
+const std::string &Bot::get_param(std::map<std::string, std::string> &t, const std::string &str) {
+    std::map<std::string, std::string>::iterator it = t.begin();
+    for (; it != t.end(); ++it) {
+      if (it->first == str) return it->second;
+    }
+    return str;
+}
+
+
+void Bot::handleLine(const std::string &line) {
     std::cout << "[IRC] " << line << std::endl;
 
-    if (line.find("INVITE") != std::string::npos) {
-      std::stringstream ss(line);
-      while (ss >> _target) {
-         if (_target[0] == '#' || _target[0] == '&')
-          break;
-      }
-      if (_target.empty()) return ;
+    std::map<std::string, std::string> t = parse_incomming_msg(line);
+    std::string cmd = get_param(t, "cmd");
+    std::string channel = get_param(t, "channel");
+    
+    if (cmd == "INVITE") {
+      if (channel.empty()) return ;
 
-      _buffer = "PRIVMSG " + _target + " :Hello 👋 I am an irc bot";
+      _send_buffer += "JOIN " + channel + "\r\n";
+      _send_buffer += "PRIVMSG " + channel + " :Hello 👋 I am an irc bot\r\n";
+
       _pfd.events |= POLLOUT;
       return;
     }
 
-    // PRIVMSG handling
-    if (line.find("PRIVMSG") != std::string::npos) {
-      std::stringstream ss(line);
-      while (ss >> _target) {
-          if (_target[0] == '#' || _target[0] == '&')
-            break;
-          else if (_target[0] == ':') {
-            _target.erase(0, 1);
-            break;
-          }
-      }
+    if (cmd == "PRIVMSG") {
+      std::string receiver = get_param(t, "receiver");
+      std::string msg = get_param(t, "msg");
 
-      std::string msg = line.substr(line.find(" :") + 2);
+      std::string target = (channel == "channel") ? receiver : channel;
 
-      // std::cout << "_target: " << _target << std::endl;
-
-      if (msg == "hello" || msg == "hi") {
-        _buffer = "PRIVMSG " + _target + " :Hi there 👋, I am an IRC bot";
-      }
-      else if (msg == "!time") {
+      if (msg == "hello" || msg == "hi") 
+      {
+        _send_buffer += "PRIVMSG " + target + " :Hi there 👋, I am an IRC bot\r\n";
+      } 
+      else if (msg == "time") 
+      {
         time_t t = time(NULL);
-        _buffer = "PRIVMSG " + _target + " :" + std::string(ctime(&t));
+        std::string time = std::string(ctime(&t));
+        time.erase(time.size() - 1);
+
+        _send_buffer += "PRIVMSG " + target + " :" + time + "\r\n";
       }
+
+      t.clear();
       _pfd.events |= POLLOUT;
     }
 }
