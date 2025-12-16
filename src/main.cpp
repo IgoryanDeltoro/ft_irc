@@ -10,6 +10,12 @@ int main(int ac, char *av[])
 
     std::string port = av[1];
     std::string password = av[2];
+    for (size_t i = 0; i < password.size(); ++i){
+        if (password[i] == ' ') {
+            std::cerr << "Error: Incorrect password" << std::endl;
+            return 1;
+        }
+    }
 
     try
     {
