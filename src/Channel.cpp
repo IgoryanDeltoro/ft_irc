@@ -4,6 +4,7 @@ Channel::Channel(const std::string &name, const std::string &nameLower, Client *
 {
     addUser(c);
     addOperator(c->getNick());
+    c->addToChannel(nameLower);
 }
 Channel::~Channel() {}
 

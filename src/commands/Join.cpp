@@ -58,6 +58,7 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
         if (ch->isUser(c->getNickLower()))
             return;
         ch->addUser(c);
+        c->addToChannel(lower);
     }
     const std::string joinMsg = c->buildPrefix() + " JOIN " + name + "\r\n";
     c->enqueue_reply(joinMsg);
