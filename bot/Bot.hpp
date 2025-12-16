@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <map>
 #include <sstream>
+# include <signal.h>
 
 class Bot {
     private:
@@ -28,7 +29,6 @@ class Bot {
         int                 _ping_time;
         int                 _ping_wind;
 
-    
         Bot();
         Bot(const Bot &other);
         Bot &operator=(const Bot &other);

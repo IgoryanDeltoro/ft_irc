@@ -1,5 +1,7 @@
 #include "Bot.hpp"
-    
+
+sig_atomic_t signaled = 1;
+
 Bot::Bot(const std::string &ip, const std::string &port, const std::string &password) : _ip(ip),  _port(port), 
   _password(password), _nick("ircBot"), _connected_fd(-1), _ping_time(time(NULL)), _ping_wind(120) {
 
@@ -32,21 +34,29 @@ int Bot::getsocketfd() {
   return sock;
 }
 
+  void stop_listen(int param) {
+    std::cout << "\nBot has been stoped." << std::endl;
+    if (param == 2)
+        signaled = 0;
+  }
+
 void Bot::run() {
  
+  signal(SIGQUIT, SIG_IGN);
+  signal(SIGINT, stop_listen);
+
   if (!_password.empty()) {
     std::string pass = "PASS " + _password + "\r\n"; 
     _send_buffer.append(pass + "NICK " + _nick + "\r\nUSER " + _nick + " * 0 :" + _nick + "\r\n");
     _pfd.events |= POLLOUT;
   }
-
   
-  while (1) {
+  while (signaled) {
     int ready = poll(&_pfd, 1, 1000);
 
     int curr_time = time(NULL);
     if (curr_time - _ping_time > _ping_wind) {
-      _send_buffer = "PING tolsun.oulu.fi\r\n";
+      _send_buffer += "PING tolsun.oulu.fi\r\n";
       _pfd.events |= POLLOUT;
       _ping_time = curr_time;
     }
