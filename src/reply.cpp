@@ -58,8 +58,8 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case ERR_NONICKNAMEGIVEN: return ":No nickname given";
     case ERR_ERRONEUSNICKNAME: return "<nick> :Erroneus nickname";
     case ERR_NICKNAMEINUSE: return "<nick> :Nickname is already in use";
-    case ERR_NORECIPIENT: return "<nick> :No recipient given (PRIVMSG)";
-    case ERR_NOTEXTTOSEND: return "<nick> :No text to send";
+    case ERR_NORECIPIENT: return ":No recipient given (PRIVMSG)";
+    case ERR_NOTEXTTOSEND: return ":No text to send";
     case ERR_CANNOTSENDTOCHAN: return "<channel> :Cannot send to channel";
     case ERR_NOTOPLEVEL: return "<mask> :No toplevel domain specified"; // Если клиент отправляет PRIVMSG на некорректный канал/хост.
     case ERR_TOOMANYTARGETS: return "<target> :Duplicate recipients. No message delivered"; //<target> — это первый из дублирующихся или превышающих лимит получателей.
