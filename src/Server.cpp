@@ -328,17 +328,35 @@ void Server::close_client(int fd)
 
 void Server::removeClientFromAllChannels(Client *c)
 {
+    std::cout << "deleting user from channel: "<< c->getNick() << std::endl;
+
     const std::string nick = c->getNickLower();
+    std::cout << "nick in lower case:  " << nick << std::endl;
+    std::cout << "channel count: " << c->getChannelSize() << std::endl;
+
     std::set<std::string> channels = c->getChannels();
+    std::cout << "channels size2: " << channels.size() << std::endl;
+
     std::set<Client *> clients;
     for (std::set<std::string>::iterator it = channels.begin(); it != channels.end(); ++it) {
         std::map<std::string, Channel *>::iterator chIt = _channels.find(*it);
-        if (chIt == _channels.end())
+        if (chIt == _channels.end()) {
+            std::cout << "NO CHANNELS in USER \n";
             continue;
+        }
+
         Channel *ch = chIt->second;
+        std::cout << "CHANNEL found: " << ch->getName() << std::endl;
         ch->removeOperator(nick);
         ch->removeUser(nick);
         ch->removeInvite(nick);
+
+        std::map<std::string, Client*>::iterator itCh = ch->getUsers().begin();
+        for (; itCh != ch->getUsers().end(); ++itCh) {
+            Client *u = itCh->second;
+            std::cout << "fd=[" << u->getFD() << "]" <<" name=[" << u->getNick() <<"]" << std::endl;
+        }
+
         if (ch->getUsers().empty()) {
             delete ch;
             _channels.erase(chIt);
@@ -349,6 +367,16 @@ void Server::removeClientFromAllChannels(Client *c)
         }
     }
     // TODO: Broadcast? когда клиент отсоединяется
+
+    std::map<std::string, Channel*>::iterator ch = _channels.begin();
+    for (; ch != _channels.end(); ++ch) {
+        std::cout << "------- chanel name: " << ch->first << std::endl;
+        std::map<std::string, Client*>::iterator user = ch->second->getUsers().begin();
+        for (; user != ch->second->getUsers().end(); ++user) {
+            Client *c = user->second;
+            std::cout << "fd=[" << c->getFD() << "]" <<" name=[" << c->getNick() <<"]" << std::endl;
+        }
+    }
 
     std::string outMessage = ":" + c->buildPrefix() + " QUIT\r\n";// " + " :" + "TODO message when QUIT!!!!!!!!!!!!!!!!!!!!" + "
     for (std::set<Client *>::iterator it = clients.begin(); it != clients.end() ; ++it) {
