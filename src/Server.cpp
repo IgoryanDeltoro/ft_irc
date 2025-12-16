@@ -14,8 +14,6 @@ Server::Server(const std::string &port, const std::string &password) : _listen_f
     }
 
     // make non-blocking
-    //  int flags = fcntl(_listen_fd, F_GETFL, O_NONBLOCK);
-    //  if (flags == -1) throw std::runtime_error("faild to make non-blocking mode");
     if (fcntl(_listen_fd, F_SETFL, O_NONBLOCK) == -1)
         throw std::runtime_error("faild to make non-blocking mode");
 

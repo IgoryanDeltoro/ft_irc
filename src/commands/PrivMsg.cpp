@@ -20,14 +20,14 @@ void Server::privmsg(Client *c, const Command &cmd) {
                 return;
             };
 
-            channel->second->broadcast(c, ":" + c->getNick() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
+            channel->second->broadcast(c, c->buildPrefix() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
             set_event_for_group_members(channel->second, true);
         } else {
             // send message to target
             std::map<std::string, Client*>::iterator it = _nicks.find(lower);
             if (it == _nicks.end()) { sendNumericReply(c, ERR_NOSUCHNICK, ch_mem[i], ""); return; };
 
-            it->second->enqueue_reply(":" + c->getNick() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
+            it->second->enqueue_reply(c->buildPrefix() + " PRIVMSG " + ch_mem[i] + " :" + cmd.getText() + "\r\n");
             set_event_for_sending_msg(it->second->getFD(), true);
         }
     }
