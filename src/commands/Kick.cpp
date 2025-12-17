@@ -3,13 +3,13 @@
 void Server::kick(Client *c, const Command &command)
 {
     if (!isClientAuth(c)) return;
-    const std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> &params = command.getParams();
     if (params.size() < 2) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "KICK", "");
         return;
     }
-    const std::string channelNamesRaw = params[0];
-    const std::string namesToKickRaw = params[1];
+    const std::string &channelNamesRaw = params[0];
+    const std::string &namesToKickRaw = params[1];
     const std::vector<std::string> channelNames = _parser.splitByComma(channelNamesRaw);
     const std::vector<std::string> namesToKick = _parser.splitByComma(namesToKickRaw);
     for (size_t i = 0; i < channelNames.size(); i++) {
@@ -41,8 +41,8 @@ void Server::kick(Client *c, const Command &command)
         }
         const std::string nameToKickLower = _parser.ircLowerStr(namesToKick[i]);
         Client *userToKick = ch->getUser(nameToKickLower);
-        if (!userToKick) continue;
-        const std::string outMessage = ":" + c->buildPrefix() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
+        if (!userToKick || !userToKick->getRegStatus()) continue;
+        const std::string outMessage = c->buildPrefix() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
         ch->broadcast(NULL, outMessage);
         set_event_for_group_members(ch, true);
         userToKick->removeChannel(channelNameLower);

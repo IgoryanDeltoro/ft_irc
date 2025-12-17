@@ -3,12 +3,12 @@
 void Server::mode(Client *c, const Command &command)
 {
     if (!isClientAuth(c)) return;
-    const std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> &params = command.getParams();
     if (params.empty()) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
         return;
     }
-    const std::string channelName = params[0];
+    const std::string &channelName = params[0];
     const std::string channelNameLower = _parser.ircLowerStr(channelName);
     if (_channels.count(channelNameLower) == 0) {
         sendNumericReply(c, ERR_NOSUCHCHANNEL, "", channelName);
@@ -27,7 +27,7 @@ void Server::mode(Client *c, const Command &command)
         sendNumericReply(c, ERR_CHANOPRIVSNEEDED, "", channelName);
         return;
     }
-    const std::string modeStr = params[1];
+    const std::string &modeStr = params[1];
     std::vector<std::string> args;
     for (size_t i = 2; i < params.size(); ++i) args.push_back(params[i]);
     std::string addModeStr;
@@ -52,7 +52,7 @@ void Server::mode(Client *c, const Command &command)
     modeMsg += "\r\n";
 
     std::cout << YELLOW "sending mode changing:" RESET << modeMsg;
-
+    
     ch->broadcast(NULL, modeMsg);
     set_event_for_group_members(ch, true);
 }
@@ -146,7 +146,7 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
         std::string nick = args[argIndex++];
         std::string nickLower = _parser.ircLowerStr(nick);
         Client *user = getClientByNick(nickLower);
-        if (!user) {
+        if (!user || !user->getRegStatus()) {
             sendNumericReply(c, ERR_NOSUCHNICK, nick, "");
             return;
         }

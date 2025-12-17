@@ -7,7 +7,8 @@ void Server::ping(Client *c, const Command &command)
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "PING", "");
         return;
     }
+    if (params[0] != _serverName) return; // TODO: error?
     const std::string arg = command.getParams()[0];
-    c->enqueue_reply("PONG " + arg + "\r\n");
+    c->enqueue_reply("PONG " + _serverName + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }

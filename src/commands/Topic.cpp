@@ -3,12 +3,12 @@
 void Server::topic(Client *c, const Command &command)
 {
     if (!isClientAuth(c)) return;
-    const std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> &params = command.getParams();
     if (params.size() < 1) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "TOPIC", "");
         return;
     }
-    const std::string channelName = params[0];
+    const std::string &channelName = params[0];
     const std::string channelNameLower = _parser.ircLowerStr(channelName);
     if (_channels.count(channelNameLower) == 0) {
         sendNumericReply(c, ERR_NOSUCHCHANNEL, "", channelName);
@@ -28,7 +28,7 @@ void Server::topic(Client *c, const Command &command)
         sendNumericReply(c, ERR_CHANOPRIVSNEEDED, "", channelName);
         return;
     }
-    const std::string newTopic = command.getText();
+    const std::string &newTopic = command.getText();
     ch->setTopic(newTopic, c->getNick());
     const std::string msg = c->buildPrefix() + " TOPIC " + ch->getName() + " :" + newTopic + "\r\n";
     ch->broadcast(NULL, msg);

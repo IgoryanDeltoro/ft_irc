@@ -2,7 +2,7 @@
 
 sig_atomic_t signaled = 1;
 
-Server::Server(const std::string &port, const std::string &password) : _listen_fd(-1), _last_timeout_check(time(NULL)), _port(port), _password(password)
+Server::Server(const std::string &port, const std::string &password) : _listen_fd(-1), _last_timeout_check(time(NULL)), _port(port), _password(password), _serverName("irc.server")
 {
     _listen_fd = create_and_bind();
     if (_listen_fd < 0)
@@ -217,7 +217,9 @@ void Server::read_message_from(Client *c, int fd)
             // Reject too long line (DoS protection)
             if (c->getRecvBuff().size() > 512)
             {
-                std::string s = RED ":server NOTICE :Input buffer too long" RESET "\r\n";
+
+                std::string s = ":" + _serverName + " NOTICE :Input buffer too long\r\n";
+
                 send(fd, s.c_str(), s.length(), 0);
                 close_client(fd);
                 return;
@@ -242,7 +244,8 @@ void Server::read_message_from(Client *c, int fd)
 
                 if ((int)c->getCmdTimeStamps().size() > flood_max)
                 {
-                    std::string s = RED ":server NOTICE :Flooding detected" RESET "\r\n";
+
+                    std::string s =  ":" + _serverName + " NOTICE :Flooding detected\r\n";
                     send(fd, s.c_str(), s.length(), 0);
                     close_client(fd);
                     return;
@@ -421,7 +424,7 @@ void Server::sendWelcome(Client *c)
     std::string nick = c->getNick();
 
     std::string welcome = GREEN;
-    welcome.append("__        _______ _     ____ ___  __  __ _____   _ \n");
+    welcome.append("\n__        _______ _     ____ ___  __  __ _____   _ \n");
     welcome.append(GREEN);
     welcome.append("\\ \\      / / ____| |   / ___/ _ \\|  \\/  | ____| | |\n");
     welcome.append(GREEN);
@@ -442,14 +445,12 @@ void Server::sendWelcome(Client *c)
     motd.append(" to see all available commands.");
     motd.append(RESET);
 
-    c->enqueue_reply(":server 001 " + nick + " :" + welcome + "\r\n");
-    c->enqueue_reply(":server 002 " + nick + " :Your host is server\r\n");
-    c->enqueue_reply(":server 003 " + nick + " :This server was created today\r\n");
-
-    c->enqueue_reply(":server 375 " + nick + " :- Message of the Day -\r\n");
-    c->enqueue_reply(":server 372 " + nick + " :- " + motd + "\r\n");
-
-    c->enqueue_reply(":server 376 " + nick + " :Have a wonderful chat session! 😊\r\n");
+    c->enqueue_reply(":" + _serverName + " 001 " + nick + " :" + welcome + "\r\n");
+    c->enqueue_reply(":" + _serverName + " 002 " + nick + " :Your host is " + _serverName + "\r\n");
+    c->enqueue_reply(":" + _serverName + " 003 " + nick + " :This server was created today\r\n");
+    c->enqueue_reply(":" + _serverName + " 375 " + nick + " :- Message of the Day -\r\n");
+    c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- " + motd + "\r\n");
+    c->enqueue_reply(":" + _serverName + " 376 " + nick + " :Have a wonderful chat session! 😊\r\n");
 
     set_event_for_sending_msg(c->getFD(), true);
 }

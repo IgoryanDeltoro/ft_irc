@@ -17,7 +17,7 @@ void Server::help(Client *c)
     msg += GREEN "PRIVMSG" RESET " <target> :<text>\n";
     msg += BLUE "----------------------------------------\n" RESET;
 
-    std::string nick = c->getNick().empty() ? "*" : c->getNick();
-    c->enqueue_reply(":server NOTICE " + nick + " :" + msg + "\r\n");
+    const std::string nick = c->getNick().empty() ? "*" : c->getNick();
+    c->enqueue_reply(":" + _serverName + " NOTICE " + nick + " :" + msg + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }

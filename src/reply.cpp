@@ -20,7 +20,7 @@ void Server::sendNumericReply(Client *c, NumericReply r, const std::string &arg,
     out << r;
     num = out.str();
     std::cout << RED "sending " << num << RESET " to client: " << nick << " :" + message + "\n";
-    c->enqueue_reply( ":server " + num + " " + nick + " " + message + "\r\n");
+    c->enqueue_reply( ":" + _serverName + " " + num + " " + nick + " " + message + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }
 
@@ -48,11 +48,7 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case ERR_BADCHANMASK: return "<channel> :Invalid channel name";
     case ERR_NOSUCHCHANNEL: return "<channel> :No such channel";
     case ERR_TOOMANYCHANNELS: return "<channel> :You have joined too many channels";
-    case ERR_UNKNOWNCOMMAND:
-        return "<command> :Unknown command";
-    // case ERR_PASSALREADY: return ":Password already success";
-    // case ERR_NEEDPASS: return ":Server PASS required ";
-    // case ERR_PASSWDMISMATCH: return ":Password incorrect"; //"<client> :Password incorrect"
+    case ERR_UNKNOWNCOMMAND: return "<command> :Unknown command";
     case ERR_ALREADYREGISTRED: return ":You may not reregister";
     case ERR_NEEDMOREPARAMS: return "<command> :Not enough parameters";
     case ERR_NONICKNAMEGIVEN: return ":No nickname given";

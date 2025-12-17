@@ -3,12 +3,12 @@
 void Server::nick(Client *c, const Command &command)
 {
     if (!c->getPassStatus()) return;
-    std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> &params = command.getParams();
     if (params.size() < 1) {
         sendNumericReply(c, ERR_NONICKNAMEGIVEN, "", "");
         return;
     }
-    const std::string newNick = params[0];
+    const std::string &newNick = params[0];
     const std::string newNickLower = _parser.ircLowerStr(newNick);
     if (!_parser.isValidNick(newNick)) {
         sendNumericReply(c, ERR_ERRONEUSNICKNAME, newNick, "");

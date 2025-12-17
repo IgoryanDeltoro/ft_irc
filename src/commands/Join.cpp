@@ -3,20 +3,20 @@
 void Server::join(Client *c, const Command &command)
 {
     if (!isClientAuth(c)) return;
-    const std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> &params = command.getParams();
     if (params.empty()) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "JOIN", "");
         return;
     }
-    const std::string channelsRaw = params[0];
+    const std::string &channelsRaw = params[0];
     const std::vector<std::string> channelNames = _parser.splitByComma(channelsRaw);
     std::vector<std::string> keys;
     if (params.size() > 1) {
-        const std::string keysRaw = params[1];
+        const std::string &keysRaw = params[1];
         keys = _parser.splitByComma(keysRaw);
     }
     for (size_t i = 0; i < channelNames.size(); i++) {
-        const std::string channelName = channelNames[i];
+        const std::string &channelName = channelNames[i];
         const std::string key = (i < keys.size() ? keys[i] : "");
         if (!_parser.isValidChannelName(channelName)) {
             sendNumericReply(c, ERR_BADCHANMASK, "", channelName);
