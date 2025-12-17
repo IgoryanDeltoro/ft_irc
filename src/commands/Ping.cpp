@@ -2,13 +2,15 @@
 
 void Server::ping(Client *c, const Command &command)
 {
-    const std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> &params = command.getParams();
     if (params.size() < 1) {
-        sendNumericReply(c, ERR_NEEDMOREPARAMS, "PING", "");
+        sendNumericReply(c, ERR_NOORIGIN, "", "");
         return;
     }
-    if (params[0] != _serverName) return; // TODO: error?
-    const std::string arg = command.getParams()[0];
+    if (params[0] != _serverName) {
+        sendNumericReply(c, ERR_NOSUCHSERVER, params[0], "");
+        return; // TODO: error?
+    }
     c->enqueue_reply("PONG " + _serverName + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }
