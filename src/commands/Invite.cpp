@@ -3,13 +3,13 @@
 void Server::invite(Client *c, const Command &command)
 {
     if (!isClientAuth(c)) return;
-    const std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> &params = command.getParams();
     if (params.size() < 2) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "INVITE", "");
         return;
     }
-    const std::string nick = params[0];
-    const std::string channel = params[1];
+    const std::string &nick = params[0];
+    const std::string &channel = params[1];
     if (!_parser.isValidNick(nick)) {
         sendNumericReply(c, ERR_ERRONEUSNICKNAME, nick, "");
         return;
@@ -20,7 +20,7 @@ void Server::invite(Client *c, const Command &command)
     }
     const std::string nickLower = _parser.ircLowerStr(nick);
     Client *invitee = getClientByNick(nickLower);
-    if (!invitee) {
+    if (!invitee || !invitee->getRegStatus()) {
         sendNumericReply(c, ERR_NOSUCHNICK, nick, "");
         return;
     }

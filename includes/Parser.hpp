@@ -4,11 +4,8 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-
-// #include "Client.hpp"
 #include "Command.hpp"
 
-// class Client;
 class Command;
 
 class Parser {

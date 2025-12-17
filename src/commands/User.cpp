@@ -3,17 +3,17 @@
 void Server::user(Client *c, const Command &command)
 {
     if (!c->getPassStatus()) return;
-    std::vector<std::string> params = command.getParams();
+    const std::vector<std::string> &params = command.getParams();
     if (params.size() < 3 || command.getText().empty()) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "USER", "");
         return;
     }
-    std::string userName = params[0];
+    const std::string &userName = params[0];
     if (userName.empty()) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "USER", "");
         return;
     }
-    std::string realName = command.getText();
+    const std::string &realName = command.getText();
     if (realName.empty()) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "USER", "");
         return;

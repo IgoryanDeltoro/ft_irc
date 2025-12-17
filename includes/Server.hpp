@@ -25,12 +25,11 @@ class Server {
         std::map<std::string, Client*>  _nicks;  //nick lower
         std::map<std::string, Channel*> _channels;  //ch name Lower lower
         Parser _parser;
-
         static const int timeout_interval = 5; // seconds
         static const int client_idle_timeout = 300; // seconds
         static const int flood_win = 10; // range between incomin meseges in seconds 
         static const int flood_max = 20; // max commands in window
-
+        const std::string _serverName;
         Server();
         Server(const Server &other);
         Server &operator=(const Server &other);
