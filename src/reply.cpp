@@ -33,6 +33,8 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case RPL_ENDOFNAMES: return "<channel> :End of /NAMES list";
     case RPL_NAMREPLY: return "= <channel> :<nick>";
     case RPL_TOPIC: return "<channel> :<nick>";
+    case ERR_NOORIGIN: return ":No origin specified" ;
+    case ERR_NOSUCHSERVER: return "<nick> :No such server";
     case ERR_KEYSET: return "<channel> :Channel key already set";
     case ERR_UNKNOWNMODE: return "<char> :is unknown mode char to me";
     case ERR_USERONCHANNEL: return "<user> <channel> :is already on channel";
@@ -60,6 +62,6 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case ERR_NOTOPLEVEL: return "<mask> :No toplevel domain specified"; // Если клиент отправляет PRIVMSG на некорректный канал/хост.
     case ERR_TOOMANYTARGETS: return "<target> :Duplicate recipients. No message delivered"; //<target> — это первый из дублирующихся или превышающих лимит получателей.
     case ERR_NOSUCHNICK: return "<nick> :No such nick/channel";
-    default: return "";
+    default: return ":Error";
     }
 }
