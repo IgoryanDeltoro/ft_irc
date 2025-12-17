@@ -20,6 +20,7 @@ class Bot {
         std::string         _port;
         std::string         _password;
         std::string         _nick;
+        std::string         _serv_name;
 
         int                 _connected_fd;
         struct sockaddr_in  _serv_addr;
@@ -28,6 +29,7 @@ class Bot {
         struct pollfd       _pfd;
         int                 _ping_time;
         int                 _ping_wind;
+
 
         Bot();
         Bot(const Bot &other);

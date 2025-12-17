@@ -56,7 +56,7 @@ void Bot::run() {
 
     int curr_time = time(NULL);
     if (curr_time - _ping_time > _ping_wind) {
-      _send_buffer += "PING tolsun.oulu.fi\r\n";
+      _send_buffer += "PING " +_serv_name + "\r\n";
       _pfd.events |= POLLOUT;
       _ping_time = curr_time;
     }
@@ -132,8 +132,15 @@ std::map<std::string, std::string> Bot::parse_incomming_msg(const std::string &s
   while (ss >> s) {
     if (s[0] == '#'|| s[0] == '&')
       t["channel"] = s;
-    else if (s.find(":") != std::string::npos && s.find("!") != std::string::npos) {
-      t["receiver"] =  str.substr(str.find(":") + 1, str.find("!") - 1);
+    else if (s.find(":") != std::string::npos && !flag) {
+      int end = 0;
+      for (size_t i = 1; i < s.size(); i++) {
+        if (s[i + 1] == '!' || s[i + 1] == ' ' || s[i + 1] == '\0') {
+          end = i;
+          break;
+        }
+      }
+      t["receiver"] =  str.substr(1, end);
       flag = true;
     } else if (s == "INVITE" || s == "PRIVMSG") {
       t["cmd"] = s;
@@ -160,6 +167,11 @@ void Bot::handleLine(const std::string &line) {
     std::map<std::string, std::string> t = parse_incomming_msg(line);
     std::string cmd = get_param(t, "cmd");
     std::string channel = get_param(t, "channel");
+
+    if (line.find(" 001 ") != std::string::npos) {
+      std::string receiver = get_param(t, "receiver");
+      _serv_name = receiver;
+    }
     
     if (cmd == "INVITE") {
       if (channel.empty()) return ;
