@@ -217,7 +217,7 @@ void Server::read_message_from(Client *c, int fd)
             // Reject too long line (DoS protection)
             if (c->getRecvBuff().size() > 512)
             {
-                std::string s = RED ":server NOTICE * :Input buffer too long" RESET "\r\n";
+                std::string s = RED ":server NOTICE :Input buffer too long" RESET "\r\n";
                 send(fd, s.c_str(), s.length(), 0);
                 close_client(fd);
                 return;
@@ -242,7 +242,7 @@ void Server::read_message_from(Client *c, int fd)
 
                 if ((int)c->getCmdTimeStamps().size() > flood_max)
                 {
-                    std::string s = RED ":server NOTICE * :Flooding detected" RESET "\r\n";
+                    std::string s = RED ":server NOTICE :Flooding detected" RESET "\r\n";
                     send(fd, s.c_str(), s.length(), 0);
                     close_client(fd);
                     return;
