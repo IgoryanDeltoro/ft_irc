@@ -13,7 +13,6 @@ class Client;
 class Channel;
 class Command;
 
-
 class Server {
     private:
         time_t                          _listen_fd;
