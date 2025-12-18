@@ -61,16 +61,16 @@ Command Parser::parse(std::string &line) const
     return cmd;
 }
 
-void Parser::trim(std::string &s) const
-{
-    size_t start = s.find_first_not_of(" ");
-    size_t end = s.find_last_not_of(" ");
+// void Parser::trim(std::string &s) const
+// {
+//     size_t start = s.find_first_not_of(" ");
+//     size_t end = s.find_last_not_of(" ");
 
-    if (start == std::string::npos)
-        s.clear();
-    else
-        s = s.substr(start, end - start + 1);
-}
+//     if (start == std::string::npos)
+//         s.clear();
+//     else
+//         s = s.substr(start, end - start + 1);
+// }
 
 const std::vector<std::string> Parser::splitByComma(const std::string &s)
 {

@@ -13,7 +13,6 @@ class Client;
 class Channel;
 class Command;
 
-
 class Server {
     private:
         int                         _listen_fd;
@@ -46,13 +45,8 @@ class Server {
         void set_event_for_sending_msg(int fd, bool);
         void check_timeouts();
         void removeClientFromAllChannels(Client *c);
-
         Channel *getChannel(const std::string &name);
-    public:
-        Server(const std::string &port, const std::string &password);
-        ~Server();
 
-        void run();
         void help(Client *);
         void pass(Client *, const Command &);
         void nick(Client *, const Command &);
@@ -75,6 +69,11 @@ class Server {
         void sendWelcome(Client *c);
         std::string getTime();
         void applyChannelMode(Client *c, Channel *channel, char f, bool adding, std::vector<std::string> &args, size_t &argIndex, std::string &addModeStr, std::string &removeModeStr, std::vector<std::string> &addModeArgs, std::vector<std::string> &removeModeArgs, int &oLimit);
+
+    public:
+        Server(const std::string &port, const std::string &password);
+        ~Server();
+        void run();
 };
 
 #endif

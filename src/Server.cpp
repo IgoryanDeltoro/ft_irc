@@ -393,8 +393,6 @@ void Server::process_line(Client *c, std::string line)
 {
     std::cout << "line: " << line << std::endl;
     if (line.empty() || line.size() > 510) return;
-    _parser.trim(line);
-    if (line.empty()) return;
     Command cmnd = _parser.parse(line);
     if (cmnd.getCommand() == NOT_VALID) return;
     if (!cmnd.getPrefix().empty()) {
