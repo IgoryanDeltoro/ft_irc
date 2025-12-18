@@ -15,6 +15,7 @@ class Command;
 
 class Server {
     private:
+        bool                            _debug;
         time_t                          _listen_fd;
         time_t                          _last_timeout_check;
         Parser                          _parser;
@@ -36,6 +37,8 @@ class Server {
         Server &operator=(const Server &other);
 
         int         create_and_bind();
+        int         flood_protection(Client *, time_t);
+        int         overflow_protection(Client *);
         void        eccept_new_fd();
         void        read_message_from(Client *, int fd);
         void        send_msg_to(Client *, int fd);
@@ -45,6 +48,7 @@ class Server {
         void        set_event_for_sending_msg(int fd, bool);
         void        check_timeouts();
         void        removeClientFromAllChannels(Client *c);
+
         Channel     *getChannel(const std::string &name);
         std::string getNumericReplyText(const NumericReply &r);
 
@@ -66,7 +70,7 @@ class Server {
         void        cap(Client *, const Command &);
         void        privmsg(Client *, const Command &);
         void        ping(Client *, const Command &);
-
+        void        print_debug_message(Client *, const Command &);
         bool        isClientAuth(Client *);
         bool        isNickExists(const std::string &);
         void        joinChannel(Client *, const std::string &, const std::string &);

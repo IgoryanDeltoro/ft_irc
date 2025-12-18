@@ -201,6 +201,11 @@ void Bot::handleLine(const std::string &line) {
 
         _send_buffer += "PRIVMSG " + target + " :" + time + "\r\n";
       }
+      else if (msg == "joke" || msg == "fun")
+      {
+        std::string t = "Five out of six people agree that Russian Roulette is safe. 😁";
+        _send_buffer += "PRIVMSG " + target + " :" + t + "\r\n";
+      }
 
       t.clear();
       _pfd.events |= POLLOUT;
