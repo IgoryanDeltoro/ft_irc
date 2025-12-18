@@ -46,7 +46,7 @@ bool checkPort(const std::string &str)
 
 bool checkPass(const std::string &password)
 {
-    if (password.empty() || password.size() > 50)
+    if (password.empty() || password.size() > 10)
         return false;
     for (size_t i = 0; i < password.size(); ++i) {
         if (password[i] == ' ' || password[i] == '\0' || password[i] == '\r' ||
