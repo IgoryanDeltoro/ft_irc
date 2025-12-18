@@ -1,6 +1,7 @@
 #include "../includes/Client.hpp"
 
-Client::Client(int fd, const std::string &host) : _fd(fd), _host(host), _last_activity(time(NULL)), _is_registred(false), _pass_ok(false) {}
+Client::Client(int fd, const std::string &host) : _fd(fd), _host(host),
+    _last_activity(time(NULL)), _is_registred(false), _pass_ok(false) {}
 
 Client::~Client() {}
 
@@ -32,7 +33,7 @@ std::deque<std::string> &Client::getMessage() { return this->_send_msg; }
 
 void Client::setPassStatus(bool status) { _pass_ok = status; }
 
-void Client::setCmdTimeStamps(const time_t &t) { _cmd_timestamps.push_back(t); }
+void Client::setCmdTimeStamps(const int &t) { _cmd_timestamps.push_back(t); }
 
 void Client::setNick(const std::string &nick) { _nick = nick; }
 
@@ -44,7 +45,7 @@ void Client::setRealName(const std::string &realName) { _realName = realName; }
 
 void Client::setRegStatus(bool status) { _is_registred = status; }
 
-void Client::setLastActivity(const time_t &t) { _last_activity = t; };
+void Client::setLastActivity(const int &t) { _last_activity = t; };
 
 bool Client::operator!=(const Client &c) const { return _fd != c._fd; }
 

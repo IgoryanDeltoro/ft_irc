@@ -54,8 +54,8 @@ class Client {
         void setUserName(const std::string &user);
         void setRealName(const std::string &user);
         void enqueue_reply(const std::string &msg);
-        void setCmdTimeStamps(const time_t &);
-        void setLastActivity(const time_t &);
+        void setCmdTimeStamps(const int &);
+        void setLastActivity(const int &);
         std::string buildPrefix() const;
         void addToChannel(const std::string &name);
         void removeChannel(const std::string &name);

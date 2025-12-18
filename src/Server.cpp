@@ -2,7 +2,8 @@
 
 sig_atomic_t signaled = 1;
 
-Server::Server(const std::string &port, const std::string &password) : _listen_fd(-1), _last_timeout_check(time(NULL)), _port(port), _password(password), _serverName("irc.server")
+Server::Server(const std::string &port, const std::string &password) : _listen_fd(-1), 
+    _last_timeout_check(time(NULL)), _port(port), _password(password), _serverName("irc.server")
 {
     _listen_fd = create_and_bind();
     if (_listen_fd < 0)
@@ -13,7 +14,6 @@ Server::Server(const std::string &port, const std::string &password) : _listen_f
         throw std::runtime_error("listen() failed");
     }
 
-    // make non-blocking
     if (fcntl(_listen_fd, F_SETFL, O_NONBLOCK) == -1)
         throw std::runtime_error("faild to make non-blocking mode");
 
@@ -50,11 +50,7 @@ int Server::create_and_bind()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    if (getaddrinfo(NULL, _port.c_str(), &hints, &res) != 0)
-    {
-        std::cout << "Error: getaddrinfo" << std::endl;
-        return -1;
-    }
+    if (getaddrinfo(NULL, _port.c_str(), &hints, &res) != 0) return -1;
 
     int server_fd = -1;
     for (struct addrinfo *ad = res; ad != NULL; ad = ad->ai_next)
@@ -63,11 +59,9 @@ int Server::create_and_bind()
         if (server_fd < 0)
             continue;
 
-        // Attach socket to the port and reconnect
         int opt = 1;
         setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-        // Bind
         if (bind(server_fd, ad->ai_addr, ad->ai_addrlen) == 0)
             break;
         close(server_fd);
@@ -95,15 +89,13 @@ void Server::check_timeouts()
 
 void stop_listen(int param)
 {
-    std::cout << RED "\nServer has been stoped." RESET << std::endl;
     if (param == 2)
         signaled = 0;
 }
 
 void Server::run()
 {
-    std::cout << BLUE "Listening on port: " GREEN << _port << RESET << std::endl;
-
+    print_message("Listening on port: ", _port, GREEN, YELLOW);
     signal(SIGQUIT, SIG_IGN);
     signal(SIGINT, stop_listen);
 
@@ -112,12 +104,10 @@ void Server::run()
         int ready = poll(&_pfds[0], _pfds.size(), 1000);
         if (ready < 0)
         {
-            if (errno == EINTR)
-                continue;
+            if (errno == EINTR) continue;
             throw std::runtime_error("poll faild");
         }
 
-        // check timeouts periodically
         time_t nt = time(NULL);
         if (nt - _last_timeout_check >= timeout_interval)
         {
@@ -125,21 +115,18 @@ void Server::run()
             _last_timeout_check = nt;
         }
 
-        /* Deal with array returned by poll(). */
         for (size_t j = 0; j < _pfds.size(); j++)
         {
             struct pollfd p = _pfds[j];
-            if (p.revents == 0)
-                continue;
+            if (p.revents == 0) continue;
             if (p.fd == _listen_fd && (p.revents & POLLIN))
             {
-                eccept_new_fd(); // rewrite below code in another function
+                eccept_new_fd(); 
             }
             else
             {
                 std::map<int, Client *>::iterator it = _clients.find(p.fd);
-                if (it == _clients.end())
-                    continue;
+                if (it == _clients.end()) continue;
                 Client *c = it->second;
 
                 if (p.revents & (POLLERR | POLLHUP | POLLNVAL))
@@ -148,21 +135,18 @@ void Server::run()
                 }
                 else
                 {
-                    // std::cout << ((p.revents & POLLIN) ? "pollin" : "pollout") << std::endl;
-                    if (p.revents & POLLIN)
-                        read_message_from(c, p.fd);
-                    if (p.revents & POLLOUT)
-                        send_msg_to(c, p.fd);
+                    if (p.revents & POLLIN) read_message_from(c, p.fd);
+                    if (p.revents & POLLOUT) send_msg_to(c, p.fd);
                 }
             }
             p.revents = 0;
         }
     }
+    print_message("\n", _serverName + " has been stoped.", RED, NULL);
 }
 
 void Server::eccept_new_fd()
 {
-    // Accept a connection
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
@@ -171,13 +155,10 @@ void Server::eccept_new_fd()
         int new_fd = accept(_listen_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
         if (new_fd < 0)
         {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                break;
-            else
-                break;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            else break;
         }
 
-        // make non-blocking mode
         if (fcntl(new_fd, F_SETFL, O_NONBLOCK) == -1)
         {
             close(new_fd);
@@ -195,7 +176,7 @@ void Server::eccept_new_fd()
         pa.revents = 0;
         _pfds.push_back(pa);
         
-        std::cout << BLUE "[" << getTime() << "] " GREEN "host=" << std::string(ipStr) << RESET << std::endl;
+        print_message("[" + getTime() + "] ", "host=" + std::string(ipStr), BLUE, GREEN);
     }
 }
 
@@ -204,8 +185,9 @@ void Server::read_message_from(Client *c, int fd)
     if (!c || _clients.find(fd) == _clients.end())
         return;
 
-    char buff[BUFFER];
+    print_message("Incoming message from " RED " <<== ", c->getNick(), GREEN, YELLOW);
 
+    char buff[BUFFER];
     while (1)
     {
         ssize_t bytes = recv(fd, buff, sizeof(buff), 0);
@@ -274,6 +256,8 @@ void Server::send_msg_to(Client *c, int fd)
     if (!c || _clients.find(fd) == _clients.end())
         return;
 
+    print_message("Outgoing message to " RED "==>>", c->getNick(), GREEN, YELLOW);
+
     while (!c->getMessage().empty())
     {
         std::string &s = c->getMessage().front();
@@ -297,7 +281,7 @@ void Server::send_msg_to(Client *c, int fd)
         }
         c->getMessage().pop_front();
     }
-    set_event_for_sending_msg(c->getFD(), !c->getRecvBuff().empty());
+    set_event_for_sending_msg(c->getFD(), !c->getMessage().empty());
 }
 
 void Server::close_client(int fd)
@@ -389,12 +373,11 @@ void Server::removeClientFromAllChannels(Client *c)
     }
 }
 
-void Server::process_line(Client *c, std::string line)
+void Server::process_line(Client *c, std::string &line)
 {
     std::cout << "line: " << line << std::endl;
     if (line.empty() || line.size() > 510) return;
-    _parser.trim(line);
-    if (line.empty()) return;
+
     Command cmnd = _parser.parse(line);
     if (cmnd.getCommand() == NOT_VALID) return;
     if (!cmnd.getPrefix().empty()) {
