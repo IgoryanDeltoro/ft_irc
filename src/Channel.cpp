@@ -3,7 +3,7 @@
 Channel::Channel(const std::string &name, const std::string &nameLower, Client *c) : _name(name), _nameLower(nameLower), _topic(""), _password(""), _userLimit(-1), _i(false), _t(false), _k(false), _l(false)
 {
     addUser(c);
-    addOperator(c->getNick());
+    addOperator(c->getNickLower());
     c->addToChannel(nameLower);
 }
 Channel::~Channel() {}
