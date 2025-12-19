@@ -13,6 +13,8 @@ const std::string &Client::getNick() const { return this->_nick; }
 
 const std::string &Client::getNickLower() const { return this->_nickLower; }
 
+const std::string &Client::getOldNickLower() const { return this->_oldNickLower; }
+
 const std::string &Client::getUserName() const { return this->_userName; }
 
 const std::string &Client::getRealName() const { return this->_realName; }
@@ -38,6 +40,8 @@ void Client::setCmdTimeStamps(const int &t) { _cmd_timestamps.push_back(t); }
 void Client::setNick(const std::string &nick) { _nick = nick; }
 
 void Client::setNickLower(const std::string &nick) { _nickLower = nick; }
+
+void Client::setOldNickLower(const std::string &nick) { _oldNickLower = nick; }
 
 void Client::setUserName(const std::string &userName) { _userName = userName; }
 

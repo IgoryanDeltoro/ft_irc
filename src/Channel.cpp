@@ -22,7 +22,12 @@ void Channel::addInvite(const std::string &nick) { _invited.insert(nick); }
 
 void Channel::removeOperator(const std::string &nick) { _operators.erase(nick); }
 void Channel::removeInvite(const std::string &nick) { _invited.erase(nick); }
-void Channel::removeUser(const std::string &nick) { _users.erase(nick); }
+void Channel::removeUser(const std::string &nick) { 
+
+    std::map<std::string, Client *>::iterator it = _users.find(nick);
+    if (it == _users.end()) return;
+    _users.erase(it); 
+}
 
 std::set<std::string> &Channel::getOperators() { return _operators; }
 std::map<std::string, Client*> &Channel::getUsers() { return _users; }
