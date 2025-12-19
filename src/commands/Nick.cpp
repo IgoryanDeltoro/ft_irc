@@ -20,13 +20,11 @@ void Server::nick(Client *c, const Command &command)
     
     std::cout << "-nick-: oldNick: " << oldNick << ", oldNickLower: " << oldNickLower << ", newNick: " << newNick << ", newNickLower:" << newNickLower << std::endl;
 
-
-
     if (oldNick == newNick) {
         std::cout << "-nick-: oldNick == newNick\n";
         return;
     } 
-    
+
     if (oldNickLower == newNickLower) {
         c->setNick(newNick);
         std::cout << "-nick-: oldNickLower == newNickLower\n";
@@ -42,16 +40,39 @@ void Server::nick(Client *c, const Command &command)
         _nicks[newNickLower] = c;
     }
 
+    if (!c->getRegStatus()) {
+
+
+        const std::string msg = ":" + oldNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";
+        c->enqueue_reply(msg);
+
+        
+        set_event_for_sending_msg(c->getFD(), true);
+
+        if (!c->getUserName().empty() && !c->getRealName().empty()) {
+            c->setRegStatus(true);
+            sendWelcome(c);
+            std::cout << "-nick-: registration!\n";
+            return;
+        }
+
+    }
+    else {
+
+    }
+
+    //--------------------------------------------------
+
+    const std::string msg = ":" + oldNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";
+    c->enqueue_reply(msg);
+    set_event_for_sending_msg(c->getFD(), true);
+
     if (!c->getRegStatus() && !c->getUserName().empty() && !c->getRealName().empty()) {
         c->setRegStatus(true);
         sendWelcome(c);
         std::cout << "-nick-: registration!\n";
         return;
     }
-
-    const std::string msg = ":" + oldNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";
-    c->enqueue_reply(msg);
-    set_event_for_sending_msg(c->getFD(), true);
     if (!c->getRegStatus()) return;
     std::set<Client *> notify;
     const std::set<std::string> &clientChannels = c->getChannels();

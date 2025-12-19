@@ -54,4 +54,18 @@ void Server::kick(Client *c, const Command &command)
             delete ch;
         }
     }
+
+
+
+    //debug:
+    std::cout << "------- chanels and nicks: " << std::endl;
+    std::map<std::string, Channel*>::iterator ch = _channels.begin();
+    for (; ch != _channels.end(); ++ch) {
+        std::cout << "------- chanel name: " << ch->first << std::endl;
+        std::map<std::string, Client*>::iterator user = ch->second->getUsers().begin();
+        for (; user != ch->second->getUsers().end(); ++user) {
+            Client *c = user->second;
+            std::cout << "fd=[" << c->getFD() << "]" <<" name=[" << c->getNick() <<"]" << std::endl;
+        }
+    }
 }
