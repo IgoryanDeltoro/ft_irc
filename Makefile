@@ -6,6 +6,12 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD #-pedantic
 BUILD_DIR := ./build
 SRC_DIRS := src
 
+MODE ?= release
+
+ifeq ($(MODE),debug)
+    CXXFLAGS += -DDEBUG=1
+endif
+
 SRC =	$(SRC_DIRS)/main.cpp			\
 		$(SRC_DIRS)/Server.cpp			\
 		$(SRC_DIRS)/Client.cpp			\
@@ -39,6 +45,9 @@ $(NAME): $(OBJ)
 $(BUILD_DIR)/%.o: %.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+debug:
+	$(MAKE) CXXFLAGS="$(CXXFLAGS) -DDEBUG=1" all
 
 clean:
 	-rm -rf $(BUILD_DIR)
