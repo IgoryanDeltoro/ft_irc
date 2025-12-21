@@ -305,10 +305,10 @@ void Server::removeClientFromAllChannels(Client *c)
         }
     }
 
-    std::map<std::string, Channel*>::iterator ch = _channels.begin();
-    for (; ch != _channels.end(); ++ch) {
-        ch->second->broadcast(c, c->buildPrefix() + " QUIT :Leaving\r\n");
-        set_event_for_group_members(ch->second, true);
+    for (std::set<Client*>::iterator it = clients.begin(); it != clients.end(); ++it) {
+        Client *client = *it;
+        client->enqueue_reply(c->buildPrefix() + " QUIT\r\n");
+        set_event_for_sending_msg(client->getFD(), true);
     }
 }
 
