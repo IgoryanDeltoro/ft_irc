@@ -318,9 +318,19 @@ void Server::process_line(Client *c, std::string &line)
 
     Command cmnd = _parser.parse(line);
     if (cmnd.getCommand() == NOT_VALID) return;
-    if (!cmnd.getPrefix().empty()) {
+
+    // TODO: Check prefix correctly for ft_irc:
+    // Clients should not use prefix when sending a message from themselves; if they use a prefix, the only valid prefix is the registered nickname associated with the client.  If the source identified by the prefix cannot be found from the server's internal database, or if the source is registered from a different link than from which the message arrived, the server must ignore the message silently.
+    if (cmnd.hasPrefixg()) {
         if (!c->getRegStatus()) return;
-        if (cmnd.getPrefix() != c->getNick()) return;
+        std::string p = cmnd.getPrefix();
+        size_t pos = p.find_first_of("!@");
+        if (pos != std::string::npos)
+            p = p.substr(0, pos);
+        if (p != c->getNick())
+            return;
+        if (cmnd.getPrefix() != c->getNick())
+            return;
     }
 
     if (cmnd.getCommand() == NOT_FOUND) 
