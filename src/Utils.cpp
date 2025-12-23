@@ -38,7 +38,7 @@ void Server::print_message(const std::string &s1, const std::string &s2, const c
     if (!s2.empty()) std::cout << std::endl;
 }
 
-int  Server::flood_protection(Client *c, time_t curr_time)
+int Server::flood_protection(Client *c, time_t curr_time)
 {
     if (!c) return -1;
 
@@ -103,7 +103,7 @@ void Server::sendWelcome(Client *c)
     c->enqueue_reply(":" + _serverName + " 003 " + nick + " :This server was created today\r\n");
     c->enqueue_reply(":" + _serverName + " 375 " + nick + " :- Message of the Day -\r\n");
     c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- " + motd + "\r\n");
-    c->enqueue_reply(":" + _serverName + " 376 " + nick + " :Have a wonderful chat session! 😊\r\n");
+    c->enqueue_reply(":" + _serverName + " 376 " + nick + " :Have a wonderful chat session!\r\n");
 
     set_event_for_sending_msg(c->getFD(), true);
 }

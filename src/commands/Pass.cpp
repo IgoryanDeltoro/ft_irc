@@ -11,6 +11,11 @@ void Server::pass(Client *c, const Command &command)
         sendNumericReply(c, ERR_ALREADYREGISTRED, "", "");
         return;
     }
-    if (params[0] != _password) return;
+    if (params[0] != _password) {
+        std::cout << MAGENTA << c->buildPrefix() << RED " incorrect password!\n" RESET;
+        return;
+    }
     c->setPassStatus(true);
+    std::cout << MAGENTA << c->buildPrefix() << RESET " set password!\n";
+
 }

@@ -47,18 +47,11 @@ class Server {
         void        set_event_for_group_members(Channel *ch, bool doSend);
         void        set_event_for_sending_msg(int fd, bool);
         void        check_timeouts();
-        void        removeClientFromAllChannels(Client *c);
+        void        removeClientFromAllChannels(Client *c, const std::string &msg);
         void        sanitize_msg(std::string &msg);
 
         Channel     *getChannel(const std::string &name);
         std::string getNumericReplyText(const NumericReply &r);
-
-
-    public:
-        Server(const std::string &port, const std::string &password);
-        ~Server();
-        
-        void        run();
         void        help(Client *);
         void        pass(Client *, const Command &);
         void        nick(Client *, const Command &);
@@ -83,6 +76,13 @@ class Server {
         void        applyChannelMode(Client *c, Channel *channel, char f, bool adding, std::vector<std::string> &args, 
                         size_t &argIndex, std::string &addModeStr, std::string &removeModeStr, std::vector<std::string> &addModeArgs,
                         std::vector<std::string> &removeModeArgs, int &oLimit);
+        void        away(Client *c, const Command &cmd);
+        void        quit(Client *c, const Command &command);
+
+    public:
+        Server(const std::string &port, const std::string &password);
+        ~Server();
+        void run();
 };
 
 #endif

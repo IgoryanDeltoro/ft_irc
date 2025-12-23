@@ -18,10 +18,10 @@ enum Commands
     TOPIC,
     MODE,
     PRIVMSG,
-    QUIT,
-    LIST,
     CAP,
-    PING
+    PING,
+    AWAY,
+    QUIT
 };
 
 class Command
@@ -32,6 +32,8 @@ private:
     std::string                     _text;
     Commands                        _command;
     std::vector<std::string>        _params;
+    bool                            _hasTrailing;
+    bool                            _hasPrefix;
 
     Command(const Commands &command);
     Command &operator=(const Commands &command);
@@ -44,12 +46,13 @@ public:
     void                            setCommand(const Commands &, const std::string &str);
     void                            addParam(const std::string &);
     void                            setText(const std::string &);
-
     const std::string               &getPrefix() const;
     const Commands                  &getCommand();
     const std::string               &getCommandStr() const;
     const std::string               &getText() const;
     const std::vector<std::string>  &getParams() const;
+    bool                            hasTrailing() const;
+    bool                            hasPrefix() const;
 };
 
 #endif

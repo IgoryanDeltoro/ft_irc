@@ -123,16 +123,20 @@ void Server::run()
             }
             else
             {
+                std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+
                 std::map<int, Client *>::iterator it = _clients.find(p.fd);
                 if (it == _clients.end()) continue;
                 Client *c = it->second;
 
                 if (p.revents & (POLLERR | POLLHUP | POLLNVAL))
                 {
+                    std::cout << "POLLERR | POLLHUP | POLLNVAL" << std::endl;
                     close_client(p.fd);
                 }
                 else
                 {
+                    std::cout << (p.revents & POLLIN ? "POLLIN" : "POLLOUT") << std::endl;
                     if (p.revents & POLLIN) read_message_from(c, p.fd);
                     if (p.revents & POLLOUT) send_msg_to(c, p.fd);
                 }
@@ -180,7 +184,10 @@ void Server::eccept_new_fd()
 
 void Server::read_message_from(Client *c, int fd)
 {
-    if (!c || _clients.find(fd) == _clients.end()) return;
+    // if (!c || _clients.find(fd) == _clients.end()) return;
+    std::cout << "-read_message_from-" << std::endl;
+
+    std::cout << "fd: " << fd << ", client: " << c->getNick() << std::endl;
 
     char buff[BUFFER];
     while (1)
@@ -188,6 +195,8 @@ void Server::read_message_from(Client *c, int fd)
         ssize_t bytes = recv(fd, buff, sizeof(buff), 0);
         if (bytes > 0)
         {
+                std::cout << "bytes > 0" << std::endl;
+
             c->getRecvBuff().append(buff, bytes);
             if (overflow_protection(c) == -1) return;
 
@@ -195,6 +204,10 @@ void Server::read_message_from(Client *c, int fd)
             c->setLastActivity(curr_time);
 
             size_t pos;
+
+            std::cout << "WHILE before" << std::endl;
+
+
             while ((pos = c->getRecvBuff().find("\r\n")) != std::string::npos)
             {
                 std::string line = c->getRecvBuff().substr(0, pos);
@@ -205,14 +218,20 @@ void Server::read_message_from(Client *c, int fd)
                 
                 process_line(c, line);
             }
+            std::cout << "WHILE after" << std::endl;
+
         }
         else if (bytes == 0)
         {
+            std::cout << "bytes == 0" << std::endl;
+
             close_client(fd);
             break;
         }
         else
         {
+            std::cout << "bytes < 0" << std::endl;
+
             if (errno == EAGAIN || errno == EWOULDBLOCK) break;
             close_client(fd);
             break;
@@ -253,6 +272,8 @@ void Server::send_msg_to(Client *c, int fd)
 
 void Server::close_client(int fd)
 {
+    std::cout << "start close_client" << std::endl;
+   
     std::map<int, Client *>::iterator it = _clients.find(fd);
     if (it == _clients.end()) return;
 
@@ -268,7 +289,7 @@ void Server::close_client(int fd)
     std::string prefix = it->second->buildPrefix();
     print_message("[" + getTime() + "] ", prefix + " leave", BLUE, GREEN);
 
-    removeClientFromAllChannels(it->second);
+    removeClientFromAllChannels(it->second, it->second->getNick());
 
     if (!it->second->getNick().empty()) 
         _nicks.erase(it->second->getNickLower());
@@ -276,10 +297,14 @@ void Server::close_client(int fd)
     close(it->first);
     delete it->second;
     _clients.erase(it);
+
+    std::cout << "finish close_client" << std::endl;
 }
 
-void Server::removeClientFromAllChannels(Client *c)
+void Server::removeClientFromAllChannels(Client *c, const std::string &msg)
 {
+    std::cout << "start removeClientFromAllChannels" << std::endl;
+
     const std::string nick = c->getNickLower();
     std::set<std::string> channels = c->getChannels();
 
@@ -307,26 +332,34 @@ void Server::removeClientFromAllChannels(Client *c)
         }
     }
 
-    std::map<std::string, Channel*>::iterator ch = _channels.begin();
-    for (; ch != _channels.end(); ++ch) {
-        ch->second->broadcast(c, c->buildPrefix() + " QUIT :Leaving\r\n");
-        set_event_for_group_members(ch->second, true);
+    for (std::set<Client*>::iterator it = clients.begin(); it != clients.end(); ++it) {
+        Client *client = *it;
+        client->enqueue_reply(c->buildPrefix() + " QUIT :" + msg + "\r\n");
+        set_event_for_sending_msg(client->getFD(), true);
     }
+    
+    std::cout << "end removeClientFromAllChannels" << std::endl;
 }
 
 void Server::process_line(Client *c, std::string &line)
 {
     if (line.empty() || line.size() > 510) return;
 
+    std::cout << YELLOW "resive " GREEN << c->buildPrefix() << RESET " : " RESET << line << std::endl;
+
     Command cmnd = _parser.parse(line);
     if (cmnd.getCommand() == NOT_VALID) return;
-    if (!cmnd.getPrefix().empty()) {
-        if (!c->getRegStatus()) return;
-        if (cmnd.getPrefix() != c->getNick()) return;
+    if (cmnd.hasPrefix()) {
+        if (!c->getRegStatus())
+            return;
+        std::string prefix = cmnd.getPrefix();
+        size_t pos = prefix.find_first_of("!@");
+        if (pos != std::string::npos)
+            prefix = prefix.substr(0, pos);
+        if (prefix != c->getNick())
+            return;
     }
-
-    if (cmnd.getCommand() == NOT_FOUND) 
-    { 
+    if (cmnd.getCommand() == NOT_FOUND) { 
         sendNumericReply(c, ERR_UNKNOWNCOMMAND, cmnd.getCommandStr(), ""); 
         return;
     }
@@ -346,6 +379,8 @@ void Server::process_line(Client *c, std::string &line)
         case CAP: cap(c, cmnd); break;
         case PRIVMSG: privmsg(c, cmnd); break;
         case PING: ping(c, cmnd); break;
+        case AWAY: away(c, cmnd); break;
+        case QUIT: quit(c, cmnd); break;
         default: break;
     }
 }
