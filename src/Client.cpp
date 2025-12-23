@@ -1,6 +1,6 @@
 #include "../includes/Client.hpp"
 
-Client::Client(int fd, const std::string &host) : _fd(fd), _host(host), _last_activity(time(NULL)), _is_registred(false), _pass_ok(false), _away(false) {}
+Client::Client(int fd, const std::string &host) : _fd(fd), _host(host), _last_activity(time(NULL)), _is_registred(false), _pass_ok(false), _away(false), isQuit(false) {}
 
 Client::~Client() {}
 

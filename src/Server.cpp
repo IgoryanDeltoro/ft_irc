@@ -207,9 +207,9 @@ void Server::read_message_from(Client *c, int fd)
 
             std::cout << "WHILE before" << std::endl;
 
-
             while ((pos = c->getRecvBuff().find("\r\n")) != std::string::npos)
             {
+                std::cout << "IN WHILE before" << std::endl;
                 std::string line = c->getRecvBuff().substr(0, pos);
                 c->getRecvBuff().erase(0, pos + 2); 
                 
@@ -217,7 +217,17 @@ void Server::read_message_from(Client *c, int fd)
                 sanitize_msg(line);
                 
                 process_line(c, line);
+                
+                if (c->isQuit)
+                {
+                    close_client(fd);
+                    return;
+                }
+
+                std::cout << "IN WHILE AFTER" << std::endl;
             }
+            
+
             std::cout << "WHILE after" << std::endl;
 
         }

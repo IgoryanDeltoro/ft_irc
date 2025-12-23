@@ -23,7 +23,6 @@ class Client {
         std::set<std::string>       _channels;
         bool                        _away;
         std::string                 _awayMsg;
-
         Client();
 
     public:
@@ -65,6 +64,10 @@ class Client {
         const std::string           &getAwayMsg() const;
         void                        setAway(const std::string &msg);
         void                        unsetAway();
+
+
+        bool                 isQuit;
+
 };
 
 #endif
