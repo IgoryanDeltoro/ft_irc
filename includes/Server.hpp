@@ -48,6 +48,7 @@ class Server {
         void        set_event_for_sending_msg(int fd, bool);
         void        check_timeouts();
         void        removeClientFromAllChannels(Client *c);
+        void        sanitize_msg(std::string &msg);
 
         Channel     *getChannel(const std::string &name);
         std::string getNumericReplyText(const NumericReply &r);
