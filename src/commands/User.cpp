@@ -2,7 +2,10 @@
 
 void Server::user(Client *c, const Command &command)
 {
-    if (!c->getPassStatus()) return;
+    if (!c->getPassStatus()) {
+        std::cout << MAGENTA << c->buildPrefix() << RED " password not set!\n" RESET;
+        return;
+    }
     
     const std::vector<std::string> &params = command.getParams();
     if (params.size() < 3 || command.getText().empty()) {
@@ -28,9 +31,11 @@ void Server::user(Client *c, const Command &command)
 
     c->setUserName(userName);
     c->setRealName(realName);
+    std::cout << MAGENTA << c->buildPrefix() << RESET " set username: " << userName << ", realname: " << realName << std::endl;
 
     if (!c->getNick().empty() && c->getPassStatus()) {
         c->setRegStatus(true);
         sendWelcome(c);
+        std::cout << MAGENTA << c->buildPrefix() << GREEN " registered and welcome sent!" RESET << std::endl;
     }
 }

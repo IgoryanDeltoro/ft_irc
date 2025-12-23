@@ -51,13 +51,6 @@ class Server {
 
         Channel     *getChannel(const std::string &name);
         std::string getNumericReplyText(const NumericReply &r);
-
-
-    public:
-        Server(const std::string &port, const std::string &password);
-        ~Server();
-        
-        void        run();
         void        help(Client *);
         void        pass(Client *, const Command &);
         void        nick(Client *, const Command &);
@@ -84,6 +77,11 @@ class Server {
                         std::vector<std::string> &removeModeArgs, int &oLimit);
         void        away(Client *c, const Command &cmd);
         void        quit(Client *c, const Command &command);
+
+    public:
+        Server(const std::string &port, const std::string &password);
+        ~Server();
+        void run();
 };
 
 #endif

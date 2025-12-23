@@ -38,7 +38,7 @@ void Server::print_message(const std::string &s1, const std::string &s2, const c
     if (!s2.empty()) std::cout << std::endl;
 }
 
-int  Server::flood_protection(Client *c, time_t curr_time)
+int Server::flood_protection(Client *c, time_t curr_time)
 {
     if (!c) return -1;
 

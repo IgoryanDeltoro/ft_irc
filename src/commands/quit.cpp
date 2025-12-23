@@ -27,4 +27,11 @@ void Server::quit(Client *c, const Command &cmd)
     close(it->first);
     delete it->second;
     _clients.erase(it);
+
+    std::cout << RED "END OF QUIT" RESET << std::endl;
+    
+    
+    std::cout << "_pfds size: " << _pfds.size() << std::endl;
+    std::cout << "clients size: " << _clients.size() << std::endl;
+    std::cout << "nicks size: " << _nicks.size() << std::endl;
 }

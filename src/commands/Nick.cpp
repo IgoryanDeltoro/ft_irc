@@ -11,7 +11,11 @@ void Server::nick(Client *c, const Command &command)
     std::cout << std::endl;
     // END DEBUG
 
-    if (!c->getPassStatus()) return;
+    if (!c->getPassStatus()) {
+        std::cout << "NICK " MAGENTA << c->buildPrefix() << RED " password not set!\n" RESET;
+        return;
+    }
+
     const std::vector<std::string> &params = command.getParams();
     if (params.size() < 1) {
         sendNumericReply(c, ERR_NONICKNAMEGIVEN, "", "");
@@ -36,10 +40,23 @@ void Server::nick(Client *c, const Command &command)
         c->setNick(newNick);
         c->setNickLower(newNickLower);
         _nicks[newNickLower] = c;
+        
+        std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " GREEN << newNickLower << RESET " to _nicks" << std::endl;
+
         if (!c->getUserName().empty() && !c->getRealName().empty()) {
             c->setRegStatus(true);
             sendWelcome(c);
+            std::cout << "NICK " MAGENTA << c->buildPrefix() << GREEN " registered and welcome sent!" RESET << std::endl;
         }
+
+        // DEBUG 
+        std::cout << "_nicks after: ";
+        for(std::map<std::string, Client *>::iterator it = _nicks.begin(); it != _nicks.end(); ++it)
+        {
+            std::cout << "["  << it->first << "] ";
+        }
+        std::cout << std::endl;
+        // END DEBUG
         return;
     }
 
@@ -47,6 +64,7 @@ void Server::nick(Client *c, const Command &command)
     
     if (oldNickLower == newNickLower) {
         c->setNick(newNick);
+        std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET "" << std::endl;
     }
     else {
         if (isNickExists(newNickLower)) {
@@ -57,13 +75,27 @@ void Server::nick(Client *c, const Command &command)
         c->setNickLower(newNickLower);
         c->setOldNickLower(oldNickLower);
         _nicks[newNickLower] = c;
+
+        std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " GREEN << newNickLower << RESET " to _nicks" << std::endl;
     }
     
     const std::string msg = ":" + oldNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";
     c->enqueue_reply(msg);
     set_event_for_sending_msg(c->getFD(), true);
 
-    if (!c->getRegStatus()) return;
+    if (!c->getRegStatus()) {
+        std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET "" << std::endl;
+
+        // DEBUG 
+        std::cout << "_nicks after: ";
+        for(std::map<std::string, Client *>::iterator it = _nicks.begin(); it != _nicks.end(); ++it)
+        {
+            std::cout << "["  << it->first << "] ";
+        }
+        std::cout << std::endl;
+        // END DEBUG
+        return;
+    } 
 
     std::set<Client *> notify;
     const std::set<std::string> &clientChannels = c->getChannels();
