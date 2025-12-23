@@ -3,22 +3,6 @@
 Parser::Parser() {}
 Parser::~Parser() {}
 
-// <message>  ::= [':' <prefix> <SPACE> ] <command> <params> <crlf>
-// <prefix>   ::= <servername> | <nick> [ '!' <user> ] [ '@' <host> ]
-// <command>  ::= <letter> { <letter> } | <number> <number> <number>
-// <SPACE>    ::= ' ' { ' ' }
-// <params>   ::= <SPACE> [ ':' <trailing> | <middle> <params> ]
-// <middle>   ::= <Any *non-empty* sequence of octets not including SPACE
-//                or NUL or CR or LF, the first of which may not be ':'>
-// <trailing> ::= <Any, possibly *empty*, sequence of octets not including
-//                  NUL or CR or LF>
-// <crlf>     ::= CR LF
-//   <target>     ::= <to> [ "," <target> ]
-//    <to>         ::= <channel> | <user> '@' <servername> | <nick> | <mask>
-//    <servername> ::= <host>
-//    <host>       ::= see RFC 952 [DNS:4] for details on allowed hostnames
-//    <mask>       ::= ('#' | '$') <chstring>
-
 Command Parser::parse(std::string &line) const
 {
     Command cmd;
@@ -28,7 +12,6 @@ Command Parser::parse(std::string &line) const
         if (c == '\0' || c == '\r' || c == '\n') return cmd;
     }
 
-    // ---------- 1. Parse prefix ----------
     if (line[0] == ':') {
         size_t spacePos = line.find(' ');
         if (spacePos == std::string::npos)
@@ -43,17 +26,15 @@ Command Parser::parse(std::string &line) const
     std::stringstream ss(line);
     std::string token;
 
-    // ---------- 2. Parse command ----------
     if (!(ss >> token)) return cmd;
     
     std::string cmdStr = token;
     for (size_t i = 0; i < cmdStr.size(); i++) {
-        cmdStr[i] = std::toupper(cmdStr[i]);
+        cmdStr[i] = std::toupper(static_cast<unsigned char>(cmdStr[i]));
     }
 
     cmd.setCommand(mapCommand(cmdStr), cmdStr);
 
-    // ---------- 3. Parse parameters ----------
     int paramCount = 0;
     while (ss >> token) {
         if (token[0] == ':') {
@@ -117,7 +98,7 @@ bool Parser::isValidChstring(const std::string &str) const
 {
     if (str.empty())
         return false;
-    for (size_t i = 1; i < str.size(); ++i) {
+    for (size_t i = 0; i < str.size(); ++i) {
         if (!isChstring(str[i]))
             return false;
     }
@@ -144,7 +125,7 @@ bool Parser::isValidChannelName(const std::string &name) const
     if (name[0] != '#' && name[0] != '&')
         return false;
     for (size_t i = 1; i < name.size(); ++i) {
-        if (!isChstring(name[i]))
+        if (name[i] == ' ' || name[i] == ',' || name[i] == '\x07')
             return false;
     }
     return true;
@@ -161,34 +142,20 @@ bool Parser::isValidUser(const std::string &str) const {
 
 Commands Parser::mapCommand(const std::string &cmd) const
 {
-    if (cmd == "PASS")
-        return PASS;
-    if (cmd == "NICK")
-        return NICK;
-    if (cmd == "USER")
-        return USER;
-    if (cmd == "JOIN")
-        return JOIN;
-    if (cmd == "MODE")
-        return MODE;
-    if (cmd == "KICK")
-        return KICK;
-    if (cmd == "TOPIC")
-        return TOPIC;
-    if (cmd == "INVITE")
-        return INVITE;
-    if (cmd == "PRIVMSG")
-        return PRIVMSG;
-    if (cmd == "QUIT")
-        return QUIT;
-    if (cmd == "LIST")
-        return LIST;
-    if (cmd == "CAP")
-        return CAP;
-    if (cmd == "PING")
-        return PING;
-    if (cmd == "HELP")
-        return HELP;
+    if (cmd == "PASS") return PASS;
+    if (cmd == "NICK") return NICK;
+    if (cmd == "USER") return USER;
+    if (cmd == "JOIN") return JOIN;
+    if (cmd == "MODE") return MODE;
+    if (cmd == "KICK") return KICK;
+    if (cmd == "TOPIC") return TOPIC;
+    if (cmd == "INVITE") return INVITE;
+    if (cmd == "PRIVMSG") return PRIVMSG;
+    if (cmd == "CAP") return CAP;
+    if (cmd == "PING") return PING;
+    if (cmd == "HELP") return HELP;
+    if (cmd == "AWAY") return AWAY;
+    if (cmd == "QUIT") return QUIT;
     return NOT_FOUND;
 }
 

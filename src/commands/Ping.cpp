@@ -9,7 +9,7 @@ void Server::ping(Client *c, const Command &command)
     }
     if (params[0] != _serverName) {
         sendNumericReply(c, ERR_NOSUCHSERVER, params[0], "");
-        return; // TODO: error?
+        return;
     }
     c->enqueue_reply("PONG " + _serverName + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);

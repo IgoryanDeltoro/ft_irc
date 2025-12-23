@@ -1,7 +1,6 @@
 #include "../includes/Client.hpp"
 
-Client::Client(int fd, const std::string &host) : _fd(fd), _host(host),
-    _last_activity(time(NULL)), _is_registred(false), _pass_ok(false) {}
+Client::Client(int fd, const std::string &host) : _fd(fd), _host(host), _last_activity(time(NULL)), _is_registred(false), _pass_ok(false), _away(false) {}
 
 Client::~Client() {}
 
@@ -64,3 +63,17 @@ const std::set<std::string> &Client::getChannels() const { return _channels; }
 void Client::addToChannel(const std::string &name) { _channels.insert(name); }
 
 void Client::removeChannel(const std::string &name) { _channels.erase(name); }
+
+bool Client::isAway() const { return _away; }
+
+const std::string &Client::getAwayMsg() const { return _awayMsg; }
+
+void Client::setAway(const std::string &msg) {
+    _away = true;
+    _awayMsg = msg;
+}
+
+void Client::unsetAway() {
+    _away = false;
+    _awayMsg.clear();
+}

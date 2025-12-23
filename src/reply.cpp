@@ -28,6 +28,9 @@ std::string Server::getNumericReplyText(const NumericReply &r)
 {
     switch (r)
     {
+    case RPL_AWAY: return "<nick> :<channel>";
+    case RPL_UNAWAY: return ":You are no longer marked as being away";
+    case RPL_NOWAWAY: return ":You have been marked as being away";
     case RPL_CHANNELMODEIS: return "<channel> <nick>";
     case RPL_INVITING: return "<channel> <nick>";
     case RPL_ENDOFNAMES: return "<channel> :End of /NAMES list";

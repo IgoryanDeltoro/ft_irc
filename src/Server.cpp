@@ -266,7 +266,7 @@ void Server::close_client(int fd)
     std::string prefix = it->second->buildPrefix();
     print_message("[" + getTime() + "] ", prefix + " leave", BLUE, GREEN);
 
-    removeClientFromAllChannels(it->second);
+    removeClientFromAllChannels(it->second, it->second->getNick());
 
     if (!it->second->getNick().empty()) 
         _nicks.erase(it->second->getNickLower());
@@ -276,7 +276,7 @@ void Server::close_client(int fd)
     _clients.erase(it);
 }
 
-void Server::removeClientFromAllChannels(Client *c)
+void Server::removeClientFromAllChannels(Client *c, const std::string &msg)
 {
     const std::string nick = c->getNickLower();
     std::set<std::string> channels = c->getChannels();
@@ -307,7 +307,7 @@ void Server::removeClientFromAllChannels(Client *c)
 
     for (std::set<Client*>::iterator it = clients.begin(); it != clients.end(); ++it) {
         Client *client = *it;
-        client->enqueue_reply(c->buildPrefix() + " QUIT\r\n");
+        client->enqueue_reply(c->buildPrefix() + " QUIT :" + msg + "\r\n");
         set_event_for_sending_msg(client->getFD(), true);
     }
 }
@@ -316,25 +316,21 @@ void Server::process_line(Client *c, std::string &line)
 {
     if (line.empty() || line.size() > 510) return;
 
+    std::cout << YELLOW "resive " GREEN << c->buildPrefix() << RESET " : " RESET << line << std::endl;
+
     Command cmnd = _parser.parse(line);
     if (cmnd.getCommand() == NOT_VALID) return;
-
-    // TODO: Check prefix correctly for ft_irc:
-    // Clients should not use prefix when sending a message from themselves; if they use a prefix, the only valid prefix is the registered nickname associated with the client.  If the source identified by the prefix cannot be found from the server's internal database, or if the source is registered from a different link than from which the message arrived, the server must ignore the message silently.
-    if (cmnd.hasPrefixg()) {
-        if (!c->getRegStatus()) return;
-        std::string p = cmnd.getPrefix();
-        size_t pos = p.find_first_of("!@");
-        if (pos != std::string::npos)
-            p = p.substr(0, pos);
-        if (p != c->getNick())
+    if (cmnd.hasPrefix()) {
+        if (!c->getRegStatus())
             return;
-        if (cmnd.getPrefix() != c->getNick())
+        std::string prefix = cmnd.getPrefix();
+        size_t pos = prefix.find_first_of("!@");
+        if (pos != std::string::npos)
+            prefix = prefix.substr(0, pos);
+        if (prefix != c->getNick())
             return;
     }
-
-    if (cmnd.getCommand() == NOT_FOUND) 
-    { 
+    if (cmnd.getCommand() == NOT_FOUND) { 
         sendNumericReply(c, ERR_UNKNOWNCOMMAND, cmnd.getCommandStr(), ""); 
         return;
     }
@@ -354,6 +350,8 @@ void Server::process_line(Client *c, std::string &line)
         case CAP: cap(c, cmnd); break;
         case PRIVMSG: privmsg(c, cmnd); break;
         case PING: ping(c, cmnd); break;
+        case AWAY: away(c, cmnd); break;
+        case QUIT: quit(c, cmnd); break;
         default: break;
     }
 }

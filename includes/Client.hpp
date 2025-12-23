@@ -21,6 +21,8 @@ class Client {
         std::deque<std::string>     _send_msg;
         std::deque<time_t>          _cmd_timestamps; 
         std::set<std::string>       _channels;
+        bool                        _away;
+        std::string                 _awayMsg;
 
         Client();
 
@@ -59,6 +61,10 @@ class Client {
         void                        addToChannel(const std::string &name);
         void                        removeChannel(const std::string &name);
         std::string                 buildPrefix() const;
+        bool                        isAway() const;
+        const std::string           &getAwayMsg() const;
+        void                        setAway(const std::string &msg);
+        void                        unsetAway();
 };
 
 #endif
