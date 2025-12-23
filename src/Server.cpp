@@ -195,7 +195,7 @@ void Server::read_message_from(Client *c, int fd)
         ssize_t bytes = recv(fd, buff, sizeof(buff), 0);
         if (bytes > 0)
         {
-            std::cout << "bytes > 0" << std::endl;
+                std::cout << "bytes > 0" << std::endl;
 
             c->getRecvBuff().append(buff, bytes);
             if (overflow_protection(c) == -1) return;
@@ -271,8 +271,7 @@ void Server::send_msg_to(Client *c, int fd)
 void Server::close_client(int fd)
 {
     std::cout << "start close_client" << std::endl;
-    
-    
+   
     std::map<int, Client *>::iterator it = _clients.find(fd);
     if (it == _clients.end()) return;
 
@@ -296,15 +295,13 @@ void Server::close_client(int fd)
     close(it->first);
     delete it->second;
     _clients.erase(it);
-    
-        std::cout << "finish close_client" << std::endl;
+
+    std::cout << "finish close_client" << std::endl;
 }
 
 void Server::removeClientFromAllChannels(Client *c, const std::string &msg)
 {
-
     std::cout << "start removeClientFromAllChannels" << std::endl;
-
 
     const std::string nick = c->getNickLower();
     std::set<std::string> channels = c->getChannels();
@@ -438,5 +435,3 @@ Channel *Server::getChannel(const std::string &name) {
     }
     return NULL;
 }
-
-

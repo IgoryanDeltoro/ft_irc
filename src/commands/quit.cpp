@@ -2,7 +2,8 @@
 
 void Server::quit(Client *c, const Command &cmd)
 {
-
+    std::cout << "start QUIT" << std::endl;
+    
     const std::string quitMsg = cmd.hasTrailing() ? cmd.getText() : c->getNick();
 
     std::map<int, Client *>::iterator it = _clients.find(c->getFD());
