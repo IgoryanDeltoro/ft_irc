@@ -123,3 +123,9 @@ void Server::print_debug_message(Client *c, const Command &cmnd)
         print_message("}", "", YELLOW, NULL);
     }
 }
+
+void Server::sanitize_msg(std::string &msg)
+{
+    msg.erase(std::remove(msg.begin(), msg.end(), '\r'), msg.end());
+    msg.erase(std::remove(msg.begin(), msg.end(), '\n'), msg.end());
+}
