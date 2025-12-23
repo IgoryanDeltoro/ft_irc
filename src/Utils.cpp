@@ -52,9 +52,9 @@ int Server::flood_protection(Client *c, time_t curr_time)
 
     if ((int)c->getCmdTimeStamps().size() > flood_max)
     {
-        std::string s =  ":" + _serverName + " NOTICE :Flooding detected\r\n";
+        std::string s = ":" + _serverName + " NOTICE :Flood\r\n";
         send(c->getFD(), s.c_str(), s.length(), 0);
-        close_client(c->getFD());
+        close_client(c->getFD(), "Flood");
         return -1;
     }
     return 0;
@@ -64,9 +64,9 @@ int Server::overflow_protection(Client *c)
 {
     if (c->getRecvBuff().size() > 512)
     {
-        std::string s = ":" + _serverName + " NOTICE :Input buffer too long\r\n";
+        std::string s = ":" + _serverName + " NOTICE :Input overflow\r\n";
         send(c->getFD(), s.c_str(), s.length(), 0);
-        close_client(c->getFD());
+        close_client(c->getFD(), "Input overflow");
         return -1;
     }
     return 0;

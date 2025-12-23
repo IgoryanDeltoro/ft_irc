@@ -43,7 +43,7 @@ class Server {
         void        read_message_from(Client *, int fd);
         void        send_msg_to(Client *, int fd);
         void        process_line(Client *, std::string &);
-        void        close_client(int);
+        void        close_client(int, const std::string &str);
         void        set_event_for_group_members(Channel *ch, bool doSend);
         void        set_event_for_sending_msg(int fd, bool);
         void        check_timeouts();
