@@ -82,7 +82,7 @@ void Server::check_timeouts()
             to_close.push_back(it->first);
     }
     for (size_t i = 0; i < to_close.size(); i++)
-        this->close_client(to_close[i]);
+        this->close_client(to_close[i], "Timeout");
 }
 
 void stop_listen(int param)
@@ -123,16 +123,20 @@ void Server::run()
             }
             else
             {
-                std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-
                 std::map<int, Client *>::iterator it = _clients.find(p.fd);
                 if (it == _clients.end()) continue;
                 Client *c = it->second;
 
-                if (p.revents & (POLLERR | POLLHUP | POLLNVAL))
+
+                if (p.revents & POLLHUP)
                 {
-                    std::cout << "POLLERR | POLLHUP | POLLNVAL" << std::endl;
-                    close_client(p.fd);
+                    std::cout << "POLLHUP" << std::endl;
+                    close_client(p.fd, "Connection closed");
+                }
+                else if (p.revents & (POLLERR | POLLNVAL))
+                {
+                    std::cout << "POLLNVAL" << std::endl;
+                    close_client(p.fd, "Connection error");
                 }
                 else
                 {
@@ -157,6 +161,7 @@ void Server::eccept_new_fd()
         int new_fd = accept(_listen_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
         if (new_fd < 0)
         {
+            // TODO: always break !!!!!!!!!!!!!
             if (errno == EAGAIN || errno == EWOULDBLOCK) break;
             else break;
         }
@@ -184,10 +189,7 @@ void Server::eccept_new_fd()
 
 void Server::read_message_from(Client *c, int fd)
 {
-    // if (!c || _clients.find(fd) == _clients.end()) return;
-    std::cout << "-read_message_from-" << std::endl;
-
-    std::cout << "fd: " << fd << ", client: " << c->getNick() << std::endl;
+    if (!c || _clients.find(fd) == _clients.end()) return;
 
     char buff[BUFFER];
     while (1)
@@ -195,7 +197,6 @@ void Server::read_message_from(Client *c, int fd)
         ssize_t bytes = recv(fd, buff, sizeof(buff), 0);
         if (bytes > 0)
         {
-                std::cout << "bytes > 0" << std::endl;
 
             c->getRecvBuff().append(buff, bytes);
             if (overflow_protection(c) == -1) return;
@@ -204,12 +205,8 @@ void Server::read_message_from(Client *c, int fd)
             c->setLastActivity(curr_time);
 
             size_t pos;
-
-            std::cout << "WHILE before" << std::endl;
-
             while ((pos = c->getRecvBuff().find("\r\n")) != std::string::npos)
             {
-                std::cout << "IN WHILE before" << std::endl;
                 std::string line = c->getRecvBuff().substr(0, pos);
                 c->getRecvBuff().erase(0, pos + 2); 
                 
@@ -218,32 +215,22 @@ void Server::read_message_from(Client *c, int fd)
                 
                 process_line(c, line);
                 
-                if (c->isQuit)
+                if (c->isQuit())
                 {
-                    close_client(fd);
+                    close_client(fd, c->getQuitMsg());
                     return;
                 }
-
-                std::cout << "IN WHILE AFTER" << std::endl;
             }
-            
-
-            std::cout << "WHILE after" << std::endl;
-
         }
         else if (bytes == 0)
         {
-            std::cout << "bytes == 0" << std::endl;
-
-            close_client(fd);
+            close_client(fd, "Connection closed");
             break;
         }
         else
         {
-            std::cout << "bytes < 0" << std::endl;
-
             if (errno == EAGAIN || errno == EWOULDBLOCK) break;
-            close_client(fd);
+            close_client(fd, "Connection error");
             break;
         }
     }
@@ -252,7 +239,7 @@ void Server::read_message_from(Client *c, int fd)
 void Server::send_msg_to(Client *c, int fd)
 {
     if (!c || _clients.find(fd) == _clients.end())
-        return;
+        return; // TODO: delete or not???
 
     while (!c->getMessage().empty())
     {
@@ -266,7 +253,7 @@ void Server::send_msg_to(Client *c, int fd)
             }
             else
             {
-                close_client(c->getFD());
+                close_client(c->getFD(), "Connection error");
                 return;
             }
         }
@@ -280,7 +267,7 @@ void Server::send_msg_to(Client *c, int fd)
     set_event_for_sending_msg(c->getFD(), !c->getMessage().empty());
 }
 
-void Server::close_client(int fd)
+void Server::close_client(int fd, const std::string &str)
 {
     std::cout << "start close_client" << std::endl;
    
@@ -299,7 +286,7 @@ void Server::close_client(int fd)
     std::string prefix = it->second->buildPrefix();
     print_message("[" + getTime() + "] ", prefix + " leave", BLUE, GREEN);
 
-    removeClientFromAllChannels(it->second, it->second->getNick());
+    removeClientFromAllChannels(it->second, str);
 
     if (!it->second->getNick().empty()) 
         _nicks.erase(it->second->getNickLower());

@@ -1,6 +1,6 @@
 #include "../includes/Client.hpp"
 
-Client::Client(int fd, const std::string &host) : _fd(fd), _host(host), _last_activity(time(NULL)), _is_registred(false), _pass_ok(false), _away(false), isQuit(false) {}
+Client::Client(int fd, const std::string &host) : _fd(fd), _host(host), _last_activity(time(NULL)), _is_registred(false), _pass_ok(false), _away(false), _isQuit(false) {}
 
 Client::~Client() {}
 
@@ -77,3 +77,12 @@ void Client::unsetAway() {
     _away = false;
     _awayMsg.clear();
 }
+
+void Client::setQuit(const std::string &msg) {
+    _isQuit = true;
+    _quitMsg = msg;
+}
+
+const std::string &Client::getQuitMsg() const { return _quitMsg; }
+
+bool Client::isQuit() const { return _isQuit; }
