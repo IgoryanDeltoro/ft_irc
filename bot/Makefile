@@ -3,7 +3,7 @@ NAME = irc_bot
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD 
 
-BOT_SRC = 	bot.cpp Bot.cpp 
+BOT_SRC = 	main.cpp Bot.cpp 
 
 BOT_OBJ = $(BOT_SRC:%.cpp=%.o)
 
