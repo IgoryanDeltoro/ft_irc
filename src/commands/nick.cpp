@@ -2,15 +2,6 @@
 
 void Server::nick(Client *c, const Command &command)
 {
-    // DEBUG
-    std::cout << "_nicks before: ";
-    for(std::map<std::string, Client *>::iterator it = _nicks.begin(); it != _nicks.end(); ++it)
-    {
-        std::cout << "["  << it->first << "] ";
-    }
-    std::cout << std::endl;
-    // END DEBUG
-
     if (!c->getPassStatus()) {
         std::cout << "NICK " MAGENTA << c->buildPrefix() << RED " password not set!\n" RESET;
         return;
@@ -48,15 +39,6 @@ void Server::nick(Client *c, const Command &command)
             sendWelcome(c);
             std::cout << "NICK " MAGENTA << c->buildPrefix() << GREEN " registered and welcome sent!" RESET << std::endl;
         }
-
-        // DEBUG 
-        std::cout << "_nicks after: ";
-        for(std::map<std::string, Client *>::iterator it = _nicks.begin(); it != _nicks.end(); ++it)
-        {
-            std::cout << "["  << it->first << "] ";
-        }
-        std::cout << std::endl;
-        // END DEBUG
         return;
     }
 
@@ -85,15 +67,6 @@ void Server::nick(Client *c, const Command &command)
 
     if (!c->getRegStatus()) {
         std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET "" << std::endl;
-
-        // DEBUG 
-        std::cout << "_nicks after: ";
-        for(std::map<std::string, Client *>::iterator it = _nicks.begin(); it != _nicks.end(); ++it)
-        {
-            std::cout << "["  << it->first << "] ";
-        }
-        std::cout << std::endl;
-        // END DEBUG
         return;
     } 
 
@@ -103,26 +76,13 @@ void Server::nick(Client *c, const Command &command)
     
     std::set<std::string>::const_iterator it = clientChannels.begin();
     for (; it != clientChannels.end(); ++it) {
-        std::cout << "user has channel: " << *it << std::endl;
-
         const std::string &chanLower = *it;
 
         std::map<std::string, Channel *>::iterator chIt = _channels.find(chanLower);
         if (chIt == _channels.end()) {
-            std::cout << "Channel not found" << std::endl;
             continue;
         }
         Channel *ch = chIt->second;
-
-        // DEBUG
-        std::map<std::string, Client *>::iterator it = ch->getUsers().begin();
-        std::cout << "users in channel: ";
-        for(; it != ch->getUsers().end(); ++it)
-        {
-            std::cout << "[" << it->first << "] | ";
-        }
-        std::cout << std::endl;
-        // END DEBUG
 
         if (!ch->isUser(oldNickLower)) continue;
 
@@ -143,17 +103,6 @@ void Server::nick(Client *c, const Command &command)
         for (std::map<std::string, Client *>::const_iterator u = users.begin(); u != users.end(); ++u)
             notify.insert(u->second);
     }
-    
-    // DEBUG 
-    std::cout << "Notify users: ";
-    for (std::set<Client *>::const_iterator it = notify.begin(); it != notify.end(); ++it) {
-        Client *other = *it;
-        if (other != c) {
-            std::cout << "[" << other->getNick() << "] ";
-        }
-    }
-    std::cout << std::endl;
-    // END DEBUG
 
     for (std::set<Client *>::const_iterator it = notify.begin(); it != notify.end(); ++it) {
         Client *other = *it;
@@ -170,13 +119,4 @@ void Server::nick(Client *c, const Command &command)
         } 
         _nicks.erase(it);
     }
-
-    // DEBUG 
-    std::cout << "_nicks after: ";
-    for(std::map<std::string, Client *>::iterator it = _nicks.begin(); it != _nicks.end(); ++it)
-    {
-        std::cout << "["  << it->first << "] ";
-    }
-    std::cout << std::endl;
-    // END DEBUG
 }

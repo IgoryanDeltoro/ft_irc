@@ -20,5 +20,7 @@
 # include <string>
 # include <signal.h>
 # include <utility>
+# include <set>
+# include <deque>
 
 #endif

@@ -1,4 +1,4 @@
-#include "../includes/Server.hpp"
+#include "../../includes/Server.hpp"
 
 bool Server::isNickExists(const std::string &nick)
 {
@@ -7,17 +7,8 @@ bool Server::isNickExists(const std::string &nick)
 
 bool Server::isClientAuth(Client *client)
 {
-
-    if (!client->getPassStatus())
-    {
-        // sendNumericReply(client, ERR_NEEDPASS, "", ""); TODO
-        return false;
-    }
-    if (!client->getRegStatus())
-    {
-        // sendNumericReply(client, ERR_NOTREGISTERED, "", ""); TODO
-        return false;
-    }
+    if (!client->getPassStatus()) return false;
+    if (!client->getRegStatus()) return false;
     return true;
 }
 
@@ -28,6 +19,20 @@ std::string Server::getTime() {
     std::string t(ctime(&timestamp));
     t.erase(t.size() - 1);
     return t;
+}
+
+void Server::check_timeouts()
+{
+    time_t nt = time(NULL);
+    std::vector<int> to_close;
+    std::map<int, Client *>::iterator it = _clients.begin();
+    for (; it != _clients.end(); ++it)
+    {
+        if (nt - it->second->getLastActivity() > client_idle_timeout)
+            to_close.push_back(it->first);
+    }
+    for (size_t i = 0; i < to_close.size(); i++)
+        this->close_client(to_close[i], "Timeout");
 }
 
 void Server::print_message(const std::string &s1, const std::string &s2, const char * c1, const char *c2) {
@@ -76,34 +81,13 @@ void Server::sendWelcome(Client *c)
 {
     std::string nick = c->getNick();
 
-    std::string welcome = GREEN;
-    welcome.append("\n__        _______ _     ____ ___  __  __ _____   _ \n");
-    welcome.append(GREEN);
-    welcome.append("\\ \\      / / ____| |   / ___/ _ \\|  \\/  | ____| | |\n");
-    welcome.append(GREEN);
-    welcome.append(" \\ \\ /\\ / /|  _| | |  | |  | | | | |\\/| |  _|   | |\n");
-    welcome.append(GREEN);
-    welcome.append("  \\ V  V / | |___| |__| |__| |_| | |  | | |___  |_|\n");
-    welcome.append(GREEN);
-    welcome.append("   \\_/\\_/  |_____|_____\\____\\___/|_|  |_|_____| (_)");
-    welcome.append(RESET);
-
-    std::string motd = BLUE;
-    motd.append("Welcome to our IRC server!\n");
-    motd.append(BLUE);
-    motd.append("Type ");
-    motd.append(GREEN);
-    motd.append("HELP");
-    motd.append(BLUE);
-    motd.append(" to see all available commands.");
-    motd.append(RESET);
-
-    c->enqueue_reply(":" + _serverName + " 001 " + nick + " :" + welcome + "\r\n");
+    c->enqueue_reply(":" + _serverName + " 001 " + nick + " :Welcome to our IRC server!" + "\r\n");
     c->enqueue_reply(":" + _serverName + " 002 " + nick + " :Your host is " + _serverName + "\r\n");
     c->enqueue_reply(":" + _serverName + " 003 " + nick + " :This server was created today\r\n");
-    c->enqueue_reply(":" + _serverName + " 375 " + nick + " :- Message of the Day -\r\n");
-    c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- " + motd + "\r\n");
-    c->enqueue_reply(":" + _serverName + " 376 " + nick + " :Have a wonderful chat session!\r\n");
+    c->enqueue_reply(":" + _serverName + " 375 " + nick + " :- " + _serverName + " Message of the day - \r\n");
+    c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- Enjoy your conversation!\r\n");
+    c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- Type HELP to see all available commands.\r\n");
+    c->enqueue_reply(":" + _serverName + " 376 " + nick + " :End of /MOTD command\r\n");
 
     set_event_for_sending_msg(c->getFD(), true);
 }
@@ -128,4 +112,57 @@ void Server::sanitize_msg(std::string &msg)
 {
     msg.erase(std::remove(msg.begin(), msg.end(), '\r'), msg.end());
     msg.erase(std::remove(msg.begin(), msg.end(), '\n'), msg.end());
+}
+
+Client *Server::getClientByNick(const std::string &nick)
+{
+    std::map<int, Client *>::iterator it;
+    for (it = _clients.begin(); it != _clients.end(); it++)
+    {
+        if (it->second && it->second->getNickLower() == nick)
+            return it->second;
+    }
+    return NULL;
+}
+
+void Server::set_event_for_sending_msg(int fd, bool doSend)
+{
+    for (size_t i = 0; i < _pfds.size(); ++i)
+    {
+        if (_pfds[i].fd == fd)
+        {
+            _pfds[i].events = POLLIN;
+            if (doSend)
+                _pfds[i].events |= POLLOUT;
+            break;
+        }
+    }
+}
+
+void Server::set_event_for_group_members(Channel *ch, bool doSend)
+{
+    std::map<std::string, Client *>::iterator member = ch->getUsers().begin();
+    for (; member != ch->getUsers().end(); ++member)
+    {
+        for (size_t i = 0; i < _pfds.size(); i++)
+        {
+            if (_pfds[i].fd == member->second->getFD())
+            {
+                _pfds[i].events = POLLIN;
+                if (doSend)
+                    _pfds[i].events |= POLLOUT;
+                break;
+            }
+        }
+    }
+}
+
+Channel *Server::getChannel(const std::string &name) {
+    std::map<std::string, Channel*>::iterator it;
+    for (it = _channels.begin(); it != _channels.end(); it++)
+    {
+        if (it->second && it->second->getNameLower() == name)
+            return it->second;
+    }
+    return NULL;
 }

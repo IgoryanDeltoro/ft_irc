@@ -13,8 +13,8 @@
 # define BECKLOG     10
 # define BUFFER      4096
 
-#ifndef DEBUG
-# define DEBUG      false
-#endif 
+# ifndef DEBUG
+#  define DEBUG      false
+# endif 
 
 #endif

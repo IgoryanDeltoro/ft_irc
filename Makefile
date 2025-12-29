@@ -1,7 +1,7 @@
 NAME = ircserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD #-pedantic
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD
 
 BUILD_DIR := ./build
 SRC_DIRS := src
@@ -18,20 +18,23 @@ SRC =	$(SRC_DIRS)/main.cpp			\
 		$(SRC_DIRS)/Parser.cpp			\
 		$(SRC_DIRS)/Command.cpp			\
 		$(SRC_DIRS)/Channel.cpp			\
-		$(SRC_DIRS)/Utils.cpp			\
-		$(SRC_DIRS)/reply.cpp			\
-		$(SRC_DIRS)/commands/Cap.cpp	\
-		$(SRC_DIRS)/commands/Help.cpp	\
-		$(SRC_DIRS)/commands/Invite.cpp	\
-		$(SRC_DIRS)/commands/Join.cpp	\
-		$(SRC_DIRS)/commands/Kick.cpp	\
-		$(SRC_DIRS)/commands/Mode.cpp	\
-		$(SRC_DIRS)/commands/Nick.cpp	\
-		$(SRC_DIRS)/commands/Pass.cpp	\
-		$(SRC_DIRS)/commands/Ping.cpp	\
-		$(SRC_DIRS)/commands/Topic.cpp	\
-		$(SRC_DIRS)/commands/User.cpp	\
-		$(SRC_DIRS)/commands/PrivMsg.cpp\
+		$(SRC_DIRS)/utils/utils.cpp		\
+		$(SRC_DIRS)/utils/reply.cpp		\
+		$(SRC_DIRS)/utils/sender.cpp	\
+		$(SRC_DIRS)/utils/reciver.cpp	\
+		$(SRC_DIRS)/utils/close.cpp		\
+		$(SRC_DIRS)/commands/cap.cpp	\
+		$(SRC_DIRS)/commands/help.cpp	\
+		$(SRC_DIRS)/commands/invite.cpp	\
+		$(SRC_DIRS)/commands/join.cpp	\
+		$(SRC_DIRS)/commands/kick.cpp	\
+		$(SRC_DIRS)/commands/mode.cpp	\
+		$(SRC_DIRS)/commands/nick.cpp	\
+		$(SRC_DIRS)/commands/pass.cpp	\
+		$(SRC_DIRS)/commands/ping.cpp	\
+		$(SRC_DIRS)/commands/topic.cpp	\
+		$(SRC_DIRS)/commands/user.cpp	\
+		$(SRC_DIRS)/commands/privMsg.cpp\
 		$(SRC_DIRS)/commands/away.cpp	\
 		$(SRC_DIRS)/commands/quit.cpp	\
 

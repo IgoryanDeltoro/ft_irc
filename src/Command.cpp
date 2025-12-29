@@ -1,7 +1,6 @@
 #include "../includes/Command.hpp"
 
 Command::Command() : _command(NOT_VALID), _hasTrailing(false), _hasPrefix(false) {};
-
 Command::~Command() {};
 
 void Command::setPrefix(const std::string &p) { 
@@ -21,16 +20,10 @@ void Command::setText(const std::string &text) {
     _hasTrailing = true;
 }
 
-const Commands &Command::getCommand() { return _command; }
-
-const std::vector<std::string> &Command::getParams() const { return _params; }
-
-const std::string &Command::getText() const { return _text; }
-
-const std::string& Command::getPrefix() const { return _prefix; }
-
-const std::string &Command::getCommandStr() const { return _commandStr; }
-
-bool Command::hasTrailing() const { return _hasTrailing; }
-
-bool Command::hasPrefix() const { return _hasPrefix; }
+const   Commands &Command::getCommand() { return _command; }
+const   std::vector<std::string> &Command::getParams() const { return _params; }
+const   std::string &Command::getText() const { return _text; }
+const   std::string& Command::getPrefix() const { return _prefix; }
+const   std::string &Command::getCommandStr() const { return _commandStr; }
+bool    Command::hasTrailing() const { return _hasTrailing; }
+bool    Command::hasPrefix() const { return _hasPrefix; }

@@ -1,9 +1,7 @@
 #ifndef CLIENT_HPP
-#define CLIENT_HPP
+# define CLIENT_HPP
 
-#include <iostream>
-#include <deque>
-#include <set>
+# include "./Libraries.hpp"
 
 class Client {
     private:
