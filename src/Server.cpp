@@ -71,20 +71,6 @@ int Server::create_and_bind()
     return server_fd;
 }
 
-void Server::check_timeouts()
-{
-    time_t nt = time(NULL);
-    std::vector<int> to_close;
-    std::map<int, Client *>::iterator it = _clients.begin();
-    for (; it != _clients.end(); ++it)
-    {
-        if (nt - it->second->getLastActivity() > client_idle_timeout)
-            to_close.push_back(it->first);
-    }
-    for (size_t i = 0; i < to_close.size(); i++)
-        this->close_client(to_close[i], "Timeout");
-}
-
 void stop_listen(int param)
 {
     if (param == 2)
@@ -94,6 +80,7 @@ void stop_listen(int param)
 void Server::run()
 {
     print_message("Listening on port: ", _port, GREEN, YELLOW);
+
     signal(SIGQUIT, SIG_IGN);
     signal(SIGINT, stop_listen);
 
@@ -127,22 +114,18 @@ void Server::run()
                 if (it == _clients.end()) continue;
                 Client *c = it->second;
 
-
                 if (p.revents & POLLHUP)
                 {
-                    std::cout << "POLLHUP" << std::endl;
                     close_client(p.fd, "Connection closed");
                 }
                 else if (p.revents & (POLLERR | POLLNVAL))
                 {
-                    std::cout << "POLLNVAL" << std::endl;
                     close_client(p.fd, "Connection error");
                 }
                 else
                 {
-                    std::cout << (p.revents & POLLIN ? "POLLIN" : "POLLOUT") << std::endl;
-                    if (p.revents & POLLIN) read_message_from(c, p.fd);
-                    if (p.revents & POLLOUT) send_msg_to(c, p.fd);
+                    if (p.revents & POLLIN) read_message_from(c);
+                    if (p.revents & POLLOUT) send_msg_to(c);
                 }
             }
             p.revents = 0;
@@ -159,17 +142,12 @@ void Server::eccept_new_fd()
     while (1)
     {
         int new_fd = accept(_listen_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-        if (new_fd < 0)
-        {
-            // TODO: always break !!!!!!!!!!!!!
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
-            else break;
-        }
+        if (new_fd < 0) break;
 
         if (fcntl(new_fd, F_SETFL, O_NONBLOCK) == -1)
         {
             close(new_fd);
-            throw std::runtime_error("faild to make non-blocking mode");
+            break;
         }
 
         char ipStr[INET_ADDRSTRLEN];
@@ -185,157 +163,6 @@ void Server::eccept_new_fd()
         
         print_message("[" + getTime() + "] ", "host=" + std::string(ipStr), BLUE, GREEN);
     }
-}
-
-void Server::read_message_from(Client *c, int fd)
-{
-    if (!c || _clients.find(fd) == _clients.end()) return;
-
-    char buff[BUFFER];
-    while (1)
-    {
-        ssize_t bytes = recv(fd, buff, sizeof(buff), 0);
-        if (bytes > 0)
-        {
-
-            c->getRecvBuff().append(buff, bytes);
-            if (overflow_protection(c) == -1) return;
-
-            time_t curr_time = time(NULL);
-            c->setLastActivity(curr_time);
-
-            size_t pos;
-            while ((pos = c->getRecvBuff().find("\r\n")) != std::string::npos)
-            {
-                std::string line = c->getRecvBuff().substr(0, pos);
-                c->getRecvBuff().erase(0, pos + 2); 
-                
-                if (flood_protection(c, curr_time) == -1) return;
-                sanitize_msg(line);
-                
-                process_line(c, line);
-                
-                if (c->isQuit())
-                {
-                    close_client(fd, c->getQuitMsg());
-                    return;
-                }
-            }
-        }
-        else if (bytes == 0)
-        {
-            close_client(fd, "Connection closed");
-            break;
-        }
-        else
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
-            close_client(fd, "Connection error");
-            break;
-        }
-    }
-}
-
-void Server::send_msg_to(Client *c, int fd)
-{
-    if (!c || _clients.find(fd) == _clients.end())
-        return; // TODO: delete or not???
-
-    while (!c->getMessage().empty())
-    {
-        std::string &s = c->getMessage().front();
-        ssize_t n = send(c->getFD(), s.c_str(), s.length(), 0);
-        if (n < 0)
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                break;
-            }
-            else
-            {
-                close_client(c->getFD(), "Connection error");
-                return;
-            }
-        }
-        if (static_cast<size_t>(n) < s.size())
-        {
-            s.erase(0, n);
-            break;
-        }
-        c->getMessage().pop_front();
-    }
-    set_event_for_sending_msg(c->getFD(), !c->getMessage().empty());
-}
-
-void Server::close_client(int fd, const std::string &str)
-{
-    std::cout << "start close_client" << std::endl;
-   
-    std::map<int, Client *>::iterator it = _clients.find(fd);
-    if (it == _clients.end()) return;
-
-    for (size_t i = 0; i < _pfds.size(); ++i)
-    {
-        if (_pfds[i].fd == fd)
-        {
-            _pfds.erase(_pfds.begin() + i);
-            break;
-        }
-    }
-
-    std::string prefix = it->second->buildPrefix();
-    print_message("[" + getTime() + "] ", prefix + " leave", BLUE, GREEN);
-
-    removeClientFromAllChannels(it->second, str);
-
-    if (!it->second->getNick().empty()) 
-        _nicks.erase(it->second->getNickLower());
-
-    close(it->first);
-    delete it->second;
-    _clients.erase(it);
-
-    std::cout << "finish close_client" << std::endl;
-}
-
-void Server::removeClientFromAllChannels(Client *c, const std::string &msg)
-{
-    std::cout << "start removeClientFromAllChannels" << std::endl;
-
-    const std::string nick = c->getNickLower();
-    std::set<std::string> channels = c->getChannels();
-
-    std::set<Client *> clients;
-    for (std::set<std::string>::iterator it = channels.begin(); it != channels.end(); ++it) {
-        std::map<std::string, Channel *>::iterator chIt = _channels.find(*it);
-        if (chIt == _channels.end()) continue;
-
-        Channel *ch = chIt->second;
-        ch->removeOperator(nick);
-        ch->removeUser(nick);
-        ch->removeInvite(nick);
-
-        if (ch->getUsers().empty()) 
-        {
-            delete ch;
-            _channels.erase(chIt);
-        } 
-        else 
-        {
-            std::map<std::string, Client*>::iterator it = ch->getUsers().begin();
-            for (; it != ch->getUsers().end() ; ++it) {
-                clients.insert(it->second);
-            }
-        }
-    }
-
-    for (std::set<Client*>::iterator it = clients.begin(); it != clients.end(); ++it) {
-        Client *client = *it;
-        client->enqueue_reply(c->buildPrefix() + " QUIT :" + msg + "\r\n");
-        set_event_for_sending_msg(client->getFD(), true);
-    }
-    
-    std::cout << "end removeClientFromAllChannels" << std::endl;
 }
 
 void Server::process_line(Client *c, std::string &line)
@@ -380,57 +207,4 @@ void Server::process_line(Client *c, std::string &line)
         case QUIT: quit(c, cmnd); break;
         default: break;
     }
-}
-
-Client *Server::getClientByNick(const std::string &nick)
-{
-    std::map<int, Client *>::iterator it;
-    for (it = _clients.begin(); it != _clients.end(); it++)
-    {
-        if (it->second && it->second->getNickLower() == nick)
-            return it->second;
-    }
-    return NULL;
-}
-
-void Server::set_event_for_sending_msg(int fd, bool doSend)
-{
-    for (size_t i = 0; i < _pfds.size(); ++i)
-    {
-        if (_pfds[i].fd == fd)
-        {
-            _pfds[i].events = POLLIN;
-            if (doSend)
-                _pfds[i].events |= POLLOUT;
-            break;
-        }
-    }
-}
-
-void Server::set_event_for_group_members(Channel *ch, bool doSend)
-{
-    std::map<std::string, Client *>::iterator member = ch->getUsers().begin();
-    for (; member != ch->getUsers().end(); ++member)
-    {
-        for (size_t i = 0; i < _pfds.size(); i++)
-        {
-            if (_pfds[i].fd == member->second->getFD())
-            {
-                _pfds[i].events = POLLIN;
-                if (doSend)
-                    _pfds[i].events |= POLLOUT;
-                break;
-            }
-        }
-    }
-}
-
-Channel *Server::getChannel(const std::string &name) {
-    std::map<std::string, Channel*>::iterator it;
-    for (it = _channels.begin(); it != _channels.end(); it++)
-    {
-        if (it->second && it->second->getNameLower() == name)
-            return it->second;
-    }
-    return NULL;
 }

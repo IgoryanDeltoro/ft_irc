@@ -1,4 +1,4 @@
-#include "../includes/Server.hpp"
+#include "../../includes/Server.hpp"
 
 void Server::sendNumericReply(Client *c, NumericReply r, const std::string &arg, const std::string &ch)
 {

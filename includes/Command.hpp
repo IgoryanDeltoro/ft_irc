@@ -1,8 +1,7 @@
 #ifndef COMMAND_HPP
-#define COMMAND_HPP
+# define COMMAND_HPP
 
-#include <iostream>
-#include <vector>
+# include "./Libraries.hpp"
 
 enum Commands
 {
