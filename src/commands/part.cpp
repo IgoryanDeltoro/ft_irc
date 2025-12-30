@@ -15,12 +15,10 @@ void Server::part(Client *c, const Command &command)
 
     for (size_t i = 0; i < channelNames.size(); i++) {
         const std::string channelNameLower = _parser.ircLowerStr(channelNames[i]);
-
         if (_channels.count(channelNameLower) == 0) {
             sendNumericReply(c, ERR_NOSUCHCHANNEL, "", channelNames[i]);
             continue;
         }
-
         Channel *ch = _channels[channelNameLower];
         partFromChannel(c, ch, partMsg);
     }
@@ -34,7 +32,7 @@ void Server::partFromChannel(Client *c, Channel *ch, const std::string &msg)
         }
 
         const std::string outMessage = ":" + c->buildPrefix() + " PART " + ch->getName() + " :" + msg + "\r\n";
-        
+    
         ch->broadcast(NULL, outMessage);
         set_event_for_group_members(ch, true);
 
@@ -49,6 +47,6 @@ void Server::partFromChannel(Client *c, Channel *ch, const std::string &msg)
             return;
         }
         if (ch->getOperators().size() == 0) {
-            //todo new operator + broadcast
+            //todo new operator + broadcast? or no?
         }
 }
