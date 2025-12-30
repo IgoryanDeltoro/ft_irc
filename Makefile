@@ -37,6 +37,7 @@ SRC =	$(SRC_DIRS)/main.cpp			\
 		$(SRC_DIRS)/commands/privMsg.cpp\
 		$(SRC_DIRS)/commands/away.cpp	\
 		$(SRC_DIRS)/commands/quit.cpp	\
+		$(SRC_DIRS)/commands/part.cpp	\
 
 
 OBJ = $(SRC:%.cpp=$(BUILD_DIR)/%.o)

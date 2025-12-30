@@ -1,20 +1,40 @@
 #include "../../includes/Server.hpp"
 
+//       Command: JOIN
+//   Parameters: ( <channel> *( "," <channel> ) [ <key> *( "," <key> ) ] ) / "0"
 void Server::join(Client *c, const Command &command)
 {
-    if (!isClientAuth(c)) return;
     const std::vector<std::string> &params = command.getParams();
     if (params.empty()) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "JOIN", "");
         return;
     }
     const std::string &channelsRaw = params[0];
+
+    if (channelsRaw == "0") {
+        const std::set<std::string> channels = c->getChannels();
+        for (std::set<std::string>::iterator it = channels.begin(); it != channels.end(); ++it) {
+            std::cout << "00000 \n";
+            
+            if (_channels.count(*it) == 0) continue;
+            
+            std::cout << "0000 11111 \n";
+            Channel *ch = _channels[*it];
+            std::cout << "--statr PART \n";
+            partFromChannel(c, ch, c->getNick());
+            std::cout << "--end PART \n";
+        }
+        return;
+    }
+
     const std::vector<std::string> channelNames = _parser.splitByComma(channelsRaw);
     std::vector<std::string> keys;
+
     if (params.size() > 1) {
         const std::string &keysRaw = params[1];
         keys = _parser.splitByComma(keysRaw);
     }
+
     for (size_t i = 0; i < channelNames.size(); i++) {
         const std::string &channelName = channelNames[i];
         const std::string key = (i < keys.size() ? keys[i] : "");
@@ -59,6 +79,7 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
             return;
         ch->addUser(c);
         c->addToChannel(lower);
+        ch->removeInvite(c->getNickLower());
         //todo remove from invites???
     }
     const std::string joinMsg = ":" + c->buildPrefix() + " JOIN " + name + "\r\n";

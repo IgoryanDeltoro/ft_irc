@@ -20,6 +20,7 @@ enum Commands
     CAP,
     PING,
     AWAY,
+    PART,
     QUIT
 };
 

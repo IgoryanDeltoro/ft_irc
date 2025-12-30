@@ -21,10 +21,11 @@ void Server::sendNumericReply(Client *c, NumericReply r, const std::string &arg,
     out << r;
     num = out.str();
 
-    std::cout << YELLOW "sending  to " GREEN << c->buildPrefix() << " " RED << num << RESET ": " + message + "\n";
-
-    c->enqueue_reply( ":" + _serverName + " " + num + " " + nick + " " + message + "\r\n");
+    std::string msgToClient = ":" + _serverName + " " + num + " " + nick + " " + message + "\r\n";
+    c->enqueue_reply(msgToClient);
     set_event_for_sending_msg(c->getFD(), true);
+
+    std::cout << YELLOW "sending  to " GREEN << c->buildPrefix() << RESET ": " + msgToClient;
 }
 
 std::string Server::getNumericReplyText(const NumericReply &r)
@@ -35,7 +36,7 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case RPL_UNAWAY: return ":You are no longer marked as being away";
     case RPL_NOWAWAY: return ":You have been marked as being away";
     case RPL_CHANNELMODEIS: return "<channel> <nick>";
-    case RPL_INVITING: return "<nick> <channel>";//todo
+    case RPL_INVITING: return "<nick> <channel>";
     case RPL_ENDOFNAMES: return "<channel> :End of /NAMES list";
     case RPL_NAMREPLY: return "= <channel> :<nick>";
     case RPL_TOPIC: return "<channel> :<nick>";
@@ -48,7 +49,7 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case ERR_CHANOPRIVSNEEDED: return "<channel> :You're not channel operator";
     case RPL_NOTOPIC: return "<channel> :No topic is set";
     case ERR_NOTONCHANNEL: return "<channel> :You're not on that channel";
-    // case ERR_NOTREGISTERED: return ": User has not registration";
+    case ERR_NOTREGISTERED: return ":You have not registered";
     case ERR_BANNEDFROMCHAN: return "<channel> :Cannot join channel (+b)";
     case ERR_INVITEONLYCHAN: return "<channel> :Cannot join channel (+i)";
     case ERR_BADCHANNELKEY: return "<channel> :Cannot join channel (+k)";

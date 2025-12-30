@@ -65,6 +65,7 @@ class Server {
         void                            cap(Client *, const Command &);
         void                            privmsg(Client *, const Command &);
         void                            ping(Client *, const Command &);
+        void                            part(Client *, const Command &);
         void                            print_debug_message(Client *, const Command &);
         bool                            isClientAuth(Client *);
         bool                            isNickExists(const std::string &);
@@ -79,6 +80,7 @@ class Server {
                                             std::vector<std::string> &removeModeArgs, int &oLimit);
         void                            away(Client *c, const Command &cmd);
         void                            quit(Client *c, const Command &command);
+        void                            partFromChannel(Client *c, Channel *ch, const std::string &msg);
 
     public:
         Server(const std::string &port, const std::string &password);

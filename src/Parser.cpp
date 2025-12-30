@@ -155,6 +155,7 @@ Commands Parser::mapCommand(const std::string &cmd) const
     if (cmd == "PING") return PING;
     if (cmd == "HELP") return HELP;
     if (cmd == "AWAY") return AWAY;
+    if (cmd == "PART") return PART;
     if (cmd == "QUIT") return QUIT;
     return NOT_FOUND;
 }

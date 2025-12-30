@@ -167,12 +167,11 @@ void Server::eccept_new_fd()
 
 void Server::process_line(Client *c, std::string &line)
 {
-    if (line.empty() || line.size() > 510) return;
-
     std::cout << YELLOW "resive from " GREEN << c->buildPrefix() << RESET ": " << line << std::endl;
 
+    if (line.empty() || line.size() > 510) return;
     Command cmnd = _parser.parse(line);
-    if (cmnd.getCommand() == NOT_VALID) return;
+
     if (cmnd.hasPrefix()) {
         if (!c->getRegStatus())
             return;
@@ -183,12 +182,29 @@ void Server::process_line(Client *c, std::string &line)
         if (prefix != c->getNick())
             return;
     }
-    if (cmnd.getCommand() == NOT_FOUND) { 
-        sendNumericReply(c, ERR_UNKNOWNCOMMAND, cmnd.getCommandStr(), ""); 
+
+    if (cmnd.getCommand() == NOT_VALID) { 
         return;
     }
 
     print_debug_message(c, cmnd);
+
+    if (!c->getRegStatus()) {
+        switch (cmnd.getCommand()) {
+            case HELP: help(c); break;
+            case PASS: pass(c, cmnd); break;
+            case NICK: nick(c, cmnd); break;
+            case USER: user(c, cmnd); break;
+            case CAP: cap(c, cmnd); break;
+            case PING: ping(c, cmnd); break;
+            case QUIT: quit(c, cmnd); break;
+            default: {
+                sendNumericReply(c, ERR_NOTREGISTERED, "", "");
+                break;
+            }
+        }
+        return;
+    }
 
     switch (cmnd.getCommand()) {
         case HELP: help(c); break;
@@ -204,7 +220,11 @@ void Server::process_line(Client *c, std::string &line)
         case PRIVMSG: privmsg(c, cmnd); break;
         case PING: ping(c, cmnd); break;
         case AWAY: away(c, cmnd); break;
+        case PART: part(c, cmnd); break;
         case QUIT: quit(c, cmnd); break;
-        default: break;
+        default: {
+            sendNumericReply(c, ERR_UNKNOWNCOMMAND, cmnd.getCommandStr(), "");
+            break;
+        };
     }
 }
