@@ -42,7 +42,7 @@ void Server::kick(Client *c, const Command &command)
         const std::string nameToKickLower = _parser.ircLowerStr(namesToKick[i]);
         Client *userToKick = ch->getUser(nameToKickLower);
         if (!userToKick || !userToKick->getRegStatus()) continue;
-        const std::string outMessage = c->buildPrefix() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
+        const std::string outMessage = ":" + c->buildPrefix() + " KICK " + channelNames[i] + " " + userToKick->getNick() + " :" + command.getText() + "\r\n";
         ch->broadcast(NULL, outMessage);
         set_event_for_group_members(ch, true);
         userToKick->removeChannel(channelNameLower);

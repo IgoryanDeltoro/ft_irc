@@ -59,8 +59,9 @@ void Server::joinChannel(Client *c, const std::string &name, const std::string &
             return;
         ch->addUser(c);
         c->addToChannel(lower);
+        //todo remove from invites???
     }
-    const std::string joinMsg = c->buildPrefix() + " JOIN " + name + "\r\n";
+    const std::string joinMsg = ":" + c->buildPrefix() + " JOIN " + name + "\r\n";
     c->enqueue_reply(joinMsg);
     set_event_for_sending_msg(c->getFD(), true);
     if (ch->getTopic().empty()) sendNumericReply(c, RPL_NOTOPIC, "", name);

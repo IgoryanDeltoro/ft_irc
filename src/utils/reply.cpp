@@ -21,7 +21,7 @@ void Server::sendNumericReply(Client *c, NumericReply r, const std::string &arg,
     out << r;
     num = out.str();
 
-    std::cout << YELLOW "sending " RED<< num << RESET " " GREEN << c->buildPrefix() << RESET " : " + message + "\n";
+    std::cout << YELLOW "sending  to " GREEN << c->buildPrefix() << " " RED << num << RESET ": " + message + "\n";
 
     c->enqueue_reply( ":" + _serverName + " " + num + " " + nick + " " + message + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
@@ -35,7 +35,7 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case RPL_UNAWAY: return ":You are no longer marked as being away";
     case RPL_NOWAWAY: return ":You have been marked as being away";
     case RPL_CHANNELMODEIS: return "<channel> <nick>";
-    case RPL_INVITING: return "<nick> <channel>";
+    case RPL_INVITING: return "<nick> <channel>";//todo
     case RPL_ENDOFNAMES: return "<channel> :End of /NAMES list";
     case RPL_NAMREPLY: return "= <channel> :<nick>";
     case RPL_TOPIC: return "<channel> :<nick>";

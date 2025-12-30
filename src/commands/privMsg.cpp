@@ -42,7 +42,7 @@ void Server::privmsg(Client *c, const Command &cmd) {
                 sendNumericReply(c, ERR_CANNOTSENDTOCHAN, "", target);
                 continue;
             }
-            ch->broadcast(c, c->buildPrefix() + " PRIVMSG " + target + " :" + cmd.getText() + "\r\n");
+            ch->broadcast(c, ":" + c->buildPrefix() + " PRIVMSG " + target + " :" + cmd.getText() + "\r\n");
             set_event_for_group_members(ch, true);
         }
         else {
@@ -60,7 +60,7 @@ void Server::privmsg(Client *c, const Command &cmd) {
                 sendNumericReply(c, ERR_NOSUCHNICK, target, "");
                 continue;
             }
-            cl->enqueue_reply(c->buildPrefix() + " PRIVMSG " + target + " :" + cmd.getText() + "\r\n");
+            cl->enqueue_reply(":" + c->buildPrefix() + " PRIVMSG " + target + " :" + cmd.getText() + "\r\n");
             set_event_for_sending_msg(cl->getFD(), true);
 
             if (cl->isAway()) {

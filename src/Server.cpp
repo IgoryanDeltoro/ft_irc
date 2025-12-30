@@ -169,7 +169,7 @@ void Server::process_line(Client *c, std::string &line)
 {
     if (line.empty() || line.size() > 510) return;
 
-    std::cout << YELLOW "resive " GREEN << c->buildPrefix() << RESET " : " RESET << line << std::endl;
+    std::cout << YELLOW "resive from " GREEN << c->buildPrefix() << RESET ": " << line << std::endl;
 
     Command cmnd = _parser.parse(line);
     if (cmnd.getCommand() == NOT_VALID) return;

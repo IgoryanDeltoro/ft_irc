@@ -58,7 +58,7 @@ void Server::removeClientFromAllChannels(Client *c, const std::string &msg)
 
     for (std::set<Client*>::iterator it = clients.begin(); it != clients.end(); ++it) {
         Client *client = *it;
-        client->enqueue_reply(c->buildPrefix() + " QUIT :" + msg + "\r\n");
+        client->enqueue_reply(":" + c->buildPrefix() + " QUIT :" + msg + "\r\n");
         set_event_for_sending_msg(client->getFD(), true);
     }
 }

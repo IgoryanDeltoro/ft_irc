@@ -32,12 +32,12 @@ void Server::nick(Client *c, const Command &command)
         c->setNickLower(newNickLower);
         _nicks[newNickLower] = c;
         
-        std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " GREEN << newNickLower << RESET " to _nicks" << std::endl;
+        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " << newNickLower << " to _nicks" << std::endl;
 
         if (!c->getUserName().empty() && !c->getRealName().empty()) {
             c->setRegStatus(true);
             sendWelcome(c);
-            std::cout << "NICK " MAGENTA << c->buildPrefix() << GREEN " registered and welcome sent!" RESET << std::endl;
+            std::cout << MAGENTA << c->buildPrefix() << GREEN " registered!" RESET << std::endl;
         }
         return;
     }
@@ -46,7 +46,7 @@ void Server::nick(Client *c, const Command &command)
     
     if (oldNickLower == newNickLower) {
         c->setNick(newNick);
-        std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET "" << std::endl;
+        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET "" << std::endl;
     }
     else {
         if (isNickExists(newNickLower)) {
@@ -58,7 +58,7 @@ void Server::nick(Client *c, const Command &command)
         c->setOldNickLower(oldNickLower);
         _nicks[newNickLower] = c;
 
-        std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " GREEN << newNickLower << RESET " to _nicks" << std::endl;
+        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " << newNickLower << " to _nicks" << std::endl;
     }
     
     const std::string msg = ":" + oldNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";
@@ -66,7 +66,6 @@ void Server::nick(Client *c, const Command &command)
     set_event_for_sending_msg(c->getFD(), true);
 
     if (!c->getRegStatus()) {
-        std::cout << "NICK " MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET "" << std::endl;
         return;
     } 
 

@@ -34,10 +34,12 @@ void Server::invite(Client *c, const Command &command)
             sendNumericReply(c, ERR_USERONCHANNEL, invitee->getNick(), ch->getName());
             return;
         }
-        if (!ch->isInvited(nickLower)) ch->addInvite(nickLower);
+        if (!ch->isInvited(nickLower)) {
+            ch->addInvite(nickLower);
+        }
     }
 
-    const std::string msg = c->buildPrefix() + " INVITE " + invitee->getNick() + " " + channel + "\r\n";
+    const std::string msg = ":" + c->buildPrefix() + " INVITE " + invitee->getNick() + " " + channel + "\r\n";
     invitee->enqueue_reply(msg);
     set_event_for_sending_msg(invitee->getFD(), true);
 
