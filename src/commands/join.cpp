@@ -22,10 +22,12 @@ void Server::join(Client *c, const Command &command)
     const std::vector<std::string> channelNames = _parser.splitByComma(channelsRaw);
     std::vector<std::string> keys;
 
+    //TODO!!!!!!!!!
     // if (channelNames.size() > 10) {
     //     sendNumericReply(c, ERR_TOOMANYTARGETS, "", channelName);
     //     return;
     // }
+
     if (params.size() > 1)
     {
         const std::string &keysRaw = params[1];

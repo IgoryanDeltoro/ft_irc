@@ -81,12 +81,10 @@ void Server::sendWelcome(Client *c)
 {
     std::string nick = c->getNick();
 
-    // c->enqueue_reply(":" + _serverName + " 001 " + nick + " :Welcome to our IRC server!" + "\r\n");
-    // c->enqueue_reply(":" + _serverName + " 002 " + nick + " :Your host is " + _serverName + "\r\n");
     c->enqueue_reply(":" + _serverName + " 001 " + nick + " :Welcome to the Internet Relay Network " + c->buildPrefix() + "\r\n");
     c->enqueue_reply(":" + _serverName + " 002 " + nick + " :Your host is " + _serverName + ", running version 1.0\r\n");
     c->enqueue_reply(":" + _serverName + " 003 " + nick + " :This server was created today\r\n");
-    c->enqueue_reply(":" + _serverName + " 004 " + nick + " :" + _serverName + " 1.0" + " - " + "itkol\r\n");
+    c->enqueue_reply(":" + _serverName + " 004 " + nick + " " + _serverName + " 1.0 a itkol\r\n");
     c->enqueue_reply(":" + _serverName + " 375 " + nick + " :- " + _serverName + " Message of the day - \r\n");
     c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- Enjoy your conversation!\r\n");
     c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- Type HELP to see all available commands.\r\n");

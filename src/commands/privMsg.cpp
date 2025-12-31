@@ -13,6 +13,13 @@ void Server::privmsg(Client *c, const Command &cmd) {
     }
 
     const std::vector<std::string> targets = _parser.splitByComma(cmd.getParams()[0]);
+
+    //TODO!!!!!!!!! ??????????????????????/
+    // if (targets.size() > 10) {
+    //     sendNumericReply(c, ERR_TOOMANYTARGETS, "", channelName);
+    //     return;
+    // }
+
     std::set<std::string> uniques;
 
     for (size_t i = 0; i < targets.size(); ++i) {
