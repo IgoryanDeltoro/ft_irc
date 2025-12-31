@@ -172,6 +172,8 @@ void Server::process_line(Client *c, std::string &line)
     if (line.empty() || line.size() > 510) return;
     Command cmnd = _parser.parse(line);
 
+    print_debug_message(c, cmnd);
+    
     if (cmnd.hasPrefix()) {
         if (!c->getRegStatus())
             return;
@@ -179,15 +181,12 @@ void Server::process_line(Client *c, std::string &line)
         size_t pos = prefix.find_first_of("!@");
         if (pos != std::string::npos)
             prefix = prefix.substr(0, pos);
-        if (prefix != c->getNick())
+        if (_parser.ircLowerStr(prefix) != c->getNickLower())
             return;
     }
-
     if (cmnd.getCommand() == NOT_VALID) { 
         return;
     }
-
-    print_debug_message(c, cmnd);
 
     if (!c->getRegStatus()) {
         switch (cmnd.getCommand()) {

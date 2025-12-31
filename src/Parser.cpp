@@ -38,6 +38,10 @@ Command Parser::parse(std::string &line) const
     int paramCount = 0;
     while (ss >> token) {
         if (token[0] == ':') {
+            if (++paramCount > 15) {
+                cmd.setCommand(NOT_VALID, "");
+                return cmd;
+            }
             std::string trailing = token.substr(1);
             std::string rest;
             std::getline(ss, rest);
@@ -83,15 +87,16 @@ bool Parser::isNumber(char c) const {
 }
 
 bool Parser::isSpecial(char c) const {
-    return c == '-' || c == '[' || c == ']' || c == '\\' || c == '`' || c == '^' || c == '{' || c == '}';
+    return c == '[' || c == ']' || c == '\\' || c == '`' ||
+           c == '_' || c == '^' || c == '{' || c == '|' || c == '}';
 }
 
 bool Parser::isNonWhite(char c) const {
-    return c != ' ' && c != '\0' && c != '\r' && c != '\n';
+    return c != ' ' && c != '\0' && c != '\r' && c != '\n' && c != '@';
 }
 
 bool Parser::isChstring(char c) const {
-    return c != ' ' && c != ',' && c != '\x07' && c != '\0' && c != '\r' && c != '\n';
+    return c != ' ' && c != ',' && c != ':' && c != '\x07' && c != '\0' && c != '\r' && c != '\n';
 }
 
 bool Parser::isValidChstring(const std::string &str) const
@@ -109,10 +114,10 @@ bool Parser::isValidNick(const std::string &nick) const
 {
     if (nick.empty() || nick.size() > 9)
         return false;
-    if (!isLetter(nick[0]))
+    if (!(isLetter(nick[0]) || isSpecial(nick[0])))
         return false;
     for (size_t i = 1; i < nick.size(); ++i) {
-        if (!(isLetter(nick[i]) || isNumber(nick[i]) || isSpecial(nick[i])))
+        if (!(isLetter(nick[i]) || isNumber(nick[i]) || isSpecial(nick[i]) || nick[i] == '-'))
             return false;
     }
     return true;
@@ -120,12 +125,12 @@ bool Parser::isValidNick(const std::string &nick) const
 
 bool Parser::isValidChannelName(const std::string &name) const
 {
-    if (name.size() < 2 || name.size() > 200)
+    if (name.size() < 2 || name.size() > 50)
         return false;
     if (name[0] != '#' && name[0] != '&')
         return false;
     for (size_t i = 1; i < name.size(); ++i) {
-        if (name[i] == ' ' || name[i] == ',' || name[i] == '\x07')
+        if (!isChstring(name[i]))
             return false;
     }
     return true;

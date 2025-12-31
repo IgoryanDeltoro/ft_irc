@@ -1,20 +1,32 @@
 #include "../../includes/Server.hpp"
 
+        //    ERR_NEEDMOREPARAMS              ERR_KEYSET
+        //    ERR_NOCHANMODES                 ERR_CHANOPRIVSNEEDED
+        //    ERR_USERNOTINCHANNEL            ERR_UNKNOWNMODE
+        //    RPL_CHANNELMODEIS
+        //    RPL_BANLIST                     RPL_ENDOFBANLIST
+        //    RPL_EXCEPTLIST                  RPL_ENDOFEXCEPTLIST
+        //    RPL_INVITELIST                  RPL_ENDOFINVITELIST
+        //    RPL_UNIQOPIS
+
 void Server::mode(Client *c, const Command &command)
 {
-    if (!isClientAuth(c)) return;
     const std::vector<std::string> &params = command.getParams();
     if (params.empty()) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
         return;
     }
+
     const std::string &channelName = params[0];
     const std::string channelNameLower = _parser.ircLowerStr(channelName);
+    
     if (_channels.count(channelNameLower) == 0) {
         sendNumericReply(c, ERR_NOSUCHCHANNEL, "", channelName);
         return;
     }
+    
     Channel *ch = _channels[channelNameLower];
+    
     if (!ch->isUser(c->getNickLower())) {
         sendNumericReply(c, ERR_NOTONCHANNEL, "", channelName);
         return;
@@ -27,13 +39,19 @@ void Server::mode(Client *c, const Command &command)
         sendNumericReply(c, ERR_CHANOPRIVSNEEDED, "", channelName);
         return;
     }
+
     const std::string &modeStr = params[1];
     std::vector<std::string> args;
-    for (size_t i = 2; i < params.size(); ++i) args.push_back(params[i]);
+    
+    for (size_t i = 2; i < params.size(); ++i) {
+        args.push_back(params[i]);
+    }
+
     std::string addModeStr;
     std::string removeModeStr;
     std::vector<std::string> addModeArgs;
     std::vector<std::string> removeModeArgs;
+
     bool adding = true;
     int oLimit = 0;
     size_t argIndex = 0;
@@ -143,27 +161,24 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
         }
         std::string nick = args[argIndex++];
         std::string nickLower = _parser.ircLowerStr(nick);
-        Client *user = getClientByNick(nickLower);
-        if (!user || !user->getRegStatus()) {
-            sendNumericReply(c, ERR_NOSUCHNICK, nick, "");
-            return;
-        }
-        if (!channel->isUser(nickLower)) {
+
+        Client *user = channel->findUserWithHistory(nickLower);
+        if (!user) {
             sendNumericReply(c, ERR_USERNOTINCHANNEL, nick, channel->getName());
             return;
         }
         if (adding) {
             if (nickLower == c->getNickLower()) return;
-            if (channel->isOperator(nickLower)) return;
+            if (channel->isOperator(user->getNickLower())) return;
             channel->addOperator(user->getNickLower());
             addModeStr += 'o';
-            addModeArgs.push_back(nick);
+            addModeArgs.push_back(user->getNick());
         }
         else {
-            if (!channel->isOperator(nickLower)) return;
+            if (!channel->isOperator(user->getNickLower())) return;
             channel->removeOperator(user->getNickLower());
             removeModeStr += 'o';
-            removeModeArgs.push_back(nick);
+            removeModeArgs.push_back(user->getNick());
         }
         return;
     }

@@ -35,6 +35,7 @@ void                    Client::setRegStatus(bool status) { _is_registred = stat
 void                    Client::setLastActivity(const int &t) { _last_activity = t; };
 
 std::string             Client::buildPrefix() const { return _nick + "!" + _userName + "@" + _host; }
+
 void                    Client::addToChannel(const std::string &name) { _channels.insert(name); }
 void                    Client::removeChannel(const std::string &name) { _channels.erase(name); }
 void                    Client::enqueue_reply(const std::string &msg) { _send_msg.push_back(msg); }
