@@ -29,7 +29,9 @@ class Server {
         std::vector<struct pollfd>      _pfds;
 
         static const int                timeout_interval = 5; 
-        static const int                client_idle_timeout = 300; 
+        // static const int                client_idle_timeout = 300;
+        static const int                ping_interval = 60;
+        static const int                ping_timeout = 120;
         static const int                flood_win = 10; 
         static const int                flood_max = 20; 
         
@@ -64,7 +66,8 @@ class Server {
         void                            invite(Client *, const Command &);
         void                            cap(Client *, const Command &);
         void                            privmsg(Client *, const Command &);
-        void                            ping(Client *, const Command &);
+        void                            ping(Client *);
+        void                            pong(Client *, const Command &);
         void                            print_debug_message(Client *, const Command &);
         bool                            isClientAuth(Client *);
         bool                            isNickExists(const std::string &);

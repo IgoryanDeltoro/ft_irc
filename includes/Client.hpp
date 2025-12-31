@@ -8,6 +8,7 @@ class Client {
         int                         _fd;
         std::string                 _host;
         int                         _last_activity;
+        bool                        _pong_status;
         bool                        _is_registred;
         bool                        _pass_ok;
         std::string                 _nick;
@@ -32,6 +33,7 @@ class Client {
 
         int                         getFD() const;
         int                         getLastActivity() const;
+        bool                        getPongStatus() const;
         int                         getChannelSize() const;
         std::string                 &getRecvBuff();
         const std::string           &getNick() const;
@@ -57,6 +59,7 @@ class Client {
         void                        enqueue_reply(const std::string &msg);
         void                        setCmdTimeStamps(const int &);
         void                        setLastActivity(const int &);
+        void                        setPongStatus(bool t);
         void                        addToChannel(const std::string &name);
         void                        removeChannel(const std::string &name);
         std::string                 buildPrefix() const;

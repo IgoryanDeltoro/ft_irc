@@ -18,7 +18,7 @@ enum Commands
     MODE,
     PRIVMSG,
     CAP,
-    PING,
+    PONG,
     AWAY,
     QUIT
 };
