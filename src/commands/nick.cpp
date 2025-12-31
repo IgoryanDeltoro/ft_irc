@@ -1,7 +1,6 @@
 #include "../../includes/Server.hpp"
 
-void Server::nick(Client *c, const Command &command)
-{
+void Server::nick(Client *c, const Command &command) {
     if (!c->getPassStatus()) {
         std::cout << "NICK " MAGENTA << c->buildPrefix() << RED " password not set!\n" RESET;
         return;
@@ -20,10 +19,10 @@ void Server::nick(Client *c, const Command &command)
     }
 
     const std::string newNickLower = _parser.ircLowerStr(newNick);
-    const std::string oldNick = c->getNick();
-    const std::string oldNickLower = c->getNickLower();
-    
-    if (oldNick.empty()) {
+    const std::string currentNick = c->getNick();
+    const std::string currentNickLower = c->getNickLower();
+
+    if (currentNick.empty()) {
         if (isNickExists(newNickLower)) {
             sendNumericReply(c, ERR_NICKNAMEINUSE, newNick, "");
             return;
@@ -42,32 +41,29 @@ void Server::nick(Client *c, const Command &command)
         return;
     }
 
-    if (oldNick == newNick) return;
-    
-    if (oldNickLower == newNickLower) {
+    if (currentNick == newNick) return;
+
+    if (currentNickLower == newNickLower) {
         c->setNick(newNick);
         std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET "" << std::endl;
-    }
-    else {
+    } else {
         if (isNickExists(newNickLower)) {
             sendNumericReply(c, ERR_NICKNAMEINUSE, newNick, "");
             return;
         }
         c->setNick(newNick);
         c->setNickLower(newNickLower);
-        c->setOldNickLower(oldNickLower);
+        c->addNickHistory(currentNickLower);
         _nicks[newNickLower] = c;
 
         std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " << newNickLower << " to _nicks" << std::endl;
     }
-    
-    const std::string msg = ":" + oldNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";
+
+    const std::string msg = ":" + currentNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";
     c->enqueue_reply(msg);
     set_event_for_sending_msg(c->getFD(), true);
 
-    if (!c->getRegStatus()) {
-        return;
-    } 
+    if (!c->getRegStatus()) return;
 
     std::set<Client *> notify;
     const std::set<std::string> &clientChannels = c->getChannels();
@@ -83,18 +79,18 @@ void Server::nick(Client *c, const Command &command)
         }
         Channel *ch = chIt->second;
 
-        if (!ch->isUser(oldNickLower)) continue;
+        if (!ch->isUser(currentNickLower)) continue;
 
-        if (oldNickLower != newNickLower) {
+        if (currentNickLower != newNickLower) {
             ch->addUser(c);
-            ch->removeUser(oldNickLower);
+            ch->removeUser(currentNickLower);
 
-            if (ch->isOperator(oldNickLower)) {
-                ch->removeOperator(oldNickLower);
+            if (ch->isOperator(currentNickLower)) {
+                ch->removeOperator(currentNickLower);
                 ch->addOperator(newNickLower);
             }
-            if (ch->isInvited(oldNickLower)) {
-                ch->removeInvite(oldNickLower);
+            if (ch->isInvited(currentNickLower)) {
+                ch->removeInvite(currentNickLower);
                 ch->addInvite(newNickLower);
             }
         }
@@ -111,11 +107,11 @@ void Server::nick(Client *c, const Command &command)
         }
     }
 
-    if (oldNickLower != newNickLower) {
-        std::map<std::string, Client *>::iterator it = _nicks.find(oldNickLower);
+    if (currentNickLower != newNickLower) {
+        std::map<std::string, Client *>::iterator it = _nicks.find(currentNickLower);
         if (it == _nicks.end()) {
             return;
-        } 
+        }
         _nicks.erase(it);
     }
 }

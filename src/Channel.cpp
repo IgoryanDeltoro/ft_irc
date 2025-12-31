@@ -40,10 +40,8 @@ const std::string &Channel::getName() const { return _name; }
 const std::string &Channel::getNameLower() const { return _nameLower; }
 void Channel::setPassword(const std::string &password) { _password = password; }
 
-void Channel::setK(const bool &k, const std::string &password)
-{
-    if (k)
-    {
+void Channel::setK(const bool &k, const std::string &password) {
+    if (k) {
         _k = true;
         _password = password;
     } else {
@@ -52,35 +50,31 @@ void Channel::setK(const bool &k, const std::string &password)
     }
 }
 
-void Channel::setI(const bool &i)
-{
+void Channel::setI(const bool &i) {
     if (i)
         _i = true;
     else
         _i = false;
 }
-void Channel::setT(const bool &t)
-{
+
+void Channel::setT(const bool &t) {
     if (t)
         _t = true;
     else
         _t = false;
 }
 
-void Channel::setL(const int &limit)
-{
+void Channel::setL(const int &limit) {
     if (limit > 0) {
         _l = true;
         _userLimit = limit;
-    }
-    else {
+    } else {
         _l = false;
         _userLimit = -1;
     }
 }
 
-void Channel::broadcast(Client *from, const std::string &msg)
-{
+void Channel::broadcast(Client *from, const std::string &msg) {
     std::map<std::string, Client*>::iterator it = _users.begin();
     for (; it != _users.end(); ++it) {
         if (from && from->getFD() == it->second->getFD()) continue;
@@ -88,15 +82,13 @@ void Channel::broadcast(Client *from, const std::string &msg)
     }
 }
 
-Client *Channel::getUser(const std::string &nick)
-{
+Client *Channel::getUser(const std::string &nick) {
     if (_users.count(nick))
         return _users[nick];
     return NULL;
 }
 
-std::string Channel::getAllModesString() const
-{
+std::string Channel::getAllModesString() const {
     std::string mode;
     if (_i) mode += "i";
     if (_t) mode += "t";
@@ -116,9 +108,7 @@ std::string Channel::getAllModesString() const
 }
 
 bool Channel::hasTopic() const { return !_topic.empty(); }
-
 const std::string &Channel::getTopicSetter() const { return _topicSetter; }
-
 const int &Channel::getTopicTimestamp() const { return _topicTimestamp; }
 
 void Channel::setTopic(const std::string &topic, const std::string &setter) {
@@ -126,8 +116,7 @@ void Channel::setTopic(const std::string &topic, const std::string &setter) {
     _topicSetter = setter;
 }
 
-const std::string Channel::getNamesList() const
-{
+const std::string Channel::getNamesList() const {
     std::string list;
     for (std::map<std::string, Client *>::const_iterator it = _users.begin(); it != _users.end(); ++it) {
         Client *user = it->second;
@@ -136,4 +125,21 @@ const std::string Channel::getNamesList() const
         list += prefix + user->getNick() + " ";
     }
     return list;
+}
+
+Client *Channel::findUserWithHistory(const std::string &nickLower) {
+    Client *c = getUser(nickLower);
+    if (c) return c;
+    return getUserbyNickHistory(nickLower);
+}
+
+Client *Channel::getUserbyNickHistory(const std::string &nickLower) {
+    time_t now = time(NULL);
+    std::map<std::string, Client *>::iterator it = _users.begin();
+    for (; it != _users.end(); ++it) {
+        if (it->second->hadNickRecently(nickLower, now)) {
+            return it->second;
+        }
+    }
+    return NULL;
 }

@@ -9,7 +9,7 @@ int                     Client::getFD() const { return this->_fd; }
 int                     Client::getLastActivity() const { return _last_activity; };
 const std::string       &Client::getNick() const { return this->_nick; }
 const std::string       &Client::getNickLower() const { return this->_nickLower; }
-const std::string       &Client::getOldNickLower() const { return this->_oldNickLower; }
+// const std::string       &Client::getOldNickLower() const { return this->_oldNickLower; }
 const std::string       &Client::getUserName() const { return this->_userName; }
 const std::string       &Client::getRealName() const { return this->_realName; }
 std::string             &Client::getRecvBuff() { return this->_recv_buff; }
@@ -28,7 +28,7 @@ void                    Client::setPassStatus(bool status) { _pass_ok = status; 
 void                    Client::setCmdTimeStamps(const int &t) { _cmd_timestamps.push_back(t); }
 void                    Client::setNick(const std::string &nick) { _nick = nick; }
 void                    Client::setNickLower(const std::string &nick) { _nickLower = nick; }
-void                    Client::setOldNickLower(const std::string &nick) { _oldNickLower = nick; }
+// void                    Client::setOldNickLower(const std::string &nick) { _oldNickLower = nick; }
 void                    Client::setUserName(const std::string &userName) { _userName = userName; }
 void                    Client::setRealName(const std::string &realName) { _realName = realName; }
 void                    Client::setRegStatus(bool status) { _is_registred = status; }
@@ -55,4 +55,22 @@ void Client::unsetAway() {
 void Client::setQuit(const std::string &msg) {
     _isQuit = true;
     _quitMsg = msg;
+}
+
+void Client::addNickHistory(const std::string &oldNick) {
+    NickHistory history;
+    history.nick = oldNick;
+    history.timestamp = time(NULL);
+    _nickHistory.push_front(history);
+
+    if (_nickHistory.size() > 10)
+        _nickHistory.pop_back();
+}
+
+bool Client::hadNickRecently(const std::string &nick, time_t now) const {
+    for (size_t i = 0; i < _nickHistory.size(); ++i) {
+        if (_nickHistory[i].nick == nick && now - _nickHistory[i].timestamp < 10)
+            return true;
+    }
+    return false;
 }

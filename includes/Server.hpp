@@ -81,7 +81,7 @@ class Server {
         void                            away(Client *c, const Command &cmd);
         void                            quit(Client *c, const Command &command);
         void                            partFromChannel(Client *c, Channel *ch, const std::string &msg);
-
+        void                            kickFromChannel(Client *c, Channel *ch, Client *target, const std::string &comment);
     public:
         Server(const std::string &port, const std::string &password);
         ~Server();
