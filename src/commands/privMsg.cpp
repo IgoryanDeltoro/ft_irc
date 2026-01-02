@@ -14,13 +14,8 @@ void Server::privmsg(Client *c, const Command &cmd) {
 
     const std::vector<std::string> targets = _parser.splitByComma(cmd.getParams()[0]);
 
-    //TODO!!!!!!!!! ??????????????????????/
-    // if (targets.size() > 10) {
-    //     sendNumericReply(c, ERR_TOOMANYTARGETS, "", channelName);
-    //     return;
-    // }
-
     std::set<std::string> uniques;
+    int limit = 0;
 
     for (size_t i = 0; i < targets.size(); ++i) {
         const std::string &target = targets[i];
@@ -49,6 +44,13 @@ void Server::privmsg(Client *c, const Command &cmd) {
                 sendNumericReply(c, ERR_CANNOTSENDTOCHAN, "", target);
                 continue;
             }
+
+            if (++limit > 10)
+            {
+                sendNumericReply(c, ERR_TOOMANYTARGETS, target, "");
+                break;
+            }
+
             ch->broadcast(c, ":" + c->buildPrefix() + " PRIVMSG " + target + " :" + cmd.getText() + "\r\n");
             set_event_for_group_members(ch, true);
         }
@@ -67,6 +69,14 @@ void Server::privmsg(Client *c, const Command &cmd) {
                 sendNumericReply(c, ERR_NOSUCHNICK, target, "");
                 continue;
             }
+
+
+            if (++limit > 10)
+            {
+                sendNumericReply(c, ERR_TOOMANYTARGETS, target, "");
+                break;
+            }
+            
             cl->enqueue_reply(":" + c->buildPrefix() + " PRIVMSG " + target + " :" + cmd.getText() + "\r\n");
             set_event_for_sending_msg(cl->getFD(), true);
 

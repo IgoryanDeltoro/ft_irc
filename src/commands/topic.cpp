@@ -2,7 +2,6 @@
 
 void Server::topic(Client *c, const Command &command)
 {
-    if (!isClientAuth(c)) return;
     const std::vector<std::string> &params = command.getParams();
     if (params.size() < 1) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "TOPIC", "");

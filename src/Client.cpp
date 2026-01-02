@@ -18,7 +18,7 @@ const bool              &Client::getPassStatus() const { return this->_pass_ok; 
 std::deque<time_t>      &Client::getCmdTimeStamps() { return _cmd_timestamps; }
 const std::string       &Client::getAwayMsg() const { return _awayMsg; }
 const std::string       &Client::getHost() const { return _host;}
-int                     Client::getChannelSize() const { return _channels.size(); }
+int                     Client::getChannelsSize() const { return _channels.size(); }
 const                   std::set<std::string> &Client::getChannels() const { return _channels; }
 std::deque<std::string> &Client::getMessage() { return this->_send_msg; }
 const std::string       &Client::getQuitMsg() const { return _quitMsg; }

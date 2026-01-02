@@ -38,7 +38,7 @@ class Client {
 
         int                         getFD() const;
         int                         getLastActivity() const;
-        int                         getChannelSize() const;
+        int                         getChannelsSize() const;
         std::string                 &getRecvBuff();
         const std::string           &getNick() const;
         const std::string           &getHost() const;

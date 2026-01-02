@@ -2,8 +2,6 @@
 
 void Server::invite(Client *c, const Command &command)
 {
-    if (!isClientAuth(c))
-        return;
     const std::vector<std::string> &params = command.getParams();
     if (params.size() < 2) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "INVITE", "");
@@ -20,8 +18,11 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
 
+    Channel *ch = NULL;
     if (_channels.count(channelLower)) {
-        Channel *ch = _channels[channelLower];
+        ch = _channels[channelLower];
+    }
+    if (ch) {
         if (!ch->isUser(c->getNickLower())) {
             sendNumericReply(c, ERR_NOTONCHANNEL, "", ch->getName());
             return;

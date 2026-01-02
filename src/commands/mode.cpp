@@ -1,14 +1,5 @@
 #include "../../includes/Server.hpp"
 
-        //    ERR_NEEDMOREPARAMS              ERR_KEYSET
-        //    ERR_NOCHANMODES                 ERR_CHANOPRIVSNEEDED
-        //    ERR_USERNOTINCHANNEL            ERR_UNKNOWNMODE
-        //    RPL_CHANNELMODEIS
-        //    RPL_BANLIST                     RPL_ENDOFBANLIST
-        //    RPL_EXCEPTLIST                  RPL_ENDOFEXCEPTLIST
-        //    RPL_INVITELIST                  RPL_ENDOFINVITELIST
-        //    RPL_UNIQOPIS
-
 void Server::mode(Client *c, const Command &command)
 {
     const std::vector<std::string> &params = command.getParams();
@@ -53,18 +44,22 @@ void Server::mode(Client *c, const Command &command)
     std::vector<std::string> removeModeArgs;
 
     bool adding = true;
-    int oLimit = 0;
+    int paramLimit = 0;
     size_t argIndex = 0;
+    
     for (size_t i = 0; i < modeStr.size(); i++) {
         const char f = modeStr[i];
         if (f == '+') { adding = true; continue; }
         if (f == '-') { adding = false; continue; }
-        applyChannelMode(c, ch, f, adding, args, argIndex, addModeStr, removeModeStr, addModeArgs, removeModeArgs, oLimit);
+        applyChannelMode(c, ch, f, adding, args, argIndex, addModeStr, removeModeStr, addModeArgs, removeModeArgs, paramLimit);
     }
+
     if (addModeStr.empty() && removeModeStr.empty()) return;
     if (!addModeStr.empty()) addModeStr = "+" + addModeStr;
     if (!removeModeStr.empty()) removeModeStr = "-" + removeModeStr;
+    
     std::string modeMsg = ":" + c->buildPrefix() + " MODE " + ch->getName() + " " + addModeStr + removeModeStr;
+    
     for (size_t i = 0; i < addModeArgs.size(); i++) modeMsg += " " + addModeArgs[i];
     for (size_t i = 0; i < removeModeArgs.size(); i++) modeMsg += " " + removeModeArgs[i];
     modeMsg += "\r\n";
@@ -73,7 +68,7 @@ void Server::mode(Client *c, const Command &command)
     set_event_for_group_members(ch, true);
 }
 
-void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, std::vector<std::string> &args, size_t &argIndex, std::string &addModeStr, std::string &removeModeStr, std::vector<std::string> &addModeArgs, std::vector<std::string> &removeModeArgs, int &oLimit)
+void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, std::vector<std::string> &args, size_t &argIndex, std::string &addModeStr, std::string &removeModeStr, std::vector<std::string> &addModeArgs, std::vector<std::string> &removeModeArgs, int &paramLimit)
 {
     switch (f) {
     case 'i': {
@@ -103,6 +98,8 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
     }
     case 'k': {
         if (adding) {
+            if (paramLimit >= 3) return;
+
             if (channel->isK()) {
                 sendNumericReply(c, ERR_KEYSET, "", channel->getName());
                 return;
@@ -113,6 +110,9 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
             }
             std::string pass = args[argIndex++];
             channel->setK(true, pass);
+
+            paramLimit++;
+
             addModeStr += 'k';
             addModeArgs.push_back(pass);
         }
@@ -127,6 +127,8 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
     case 'l':
     {
         if (adding) {
+            if (paramLimit >= 3) return;
+            
             if (argIndex >= args.size()) {
                 sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
                 return;
@@ -139,6 +141,8 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
             channel->setL(lim);
             addModeStr += 'l';
             addModeArgs.push_back(limStr);
+            paramLimit++;
+
         }
         else {
             if (!channel->isL()) return;
@@ -149,12 +153,11 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
     }
     case 'o':
     {
-        if (oLimit >= 3) {
+        if (paramLimit >= 3) {
             if (argIndex < args.size())
                 argIndex++;
             return;
         }
-        oLimit ++;
         if (argIndex >= args.size()) {
             sendNumericReply(c, ERR_NEEDMOREPARAMS, "MODE", "");
             return;
@@ -175,14 +178,14 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
             addModeArgs.push_back(user->getNick());
         }
         else {
-            if (!channel->isOperator(user->getNickLower())) return;
             channel->removeOperator(user->getNickLower());
             removeModeStr += 'o';
             removeModeArgs.push_back(user->getNick());
         }
+        paramLimit++;
         return;
     }
     default: { sendNumericReply(c, ERR_UNKNOWNMODE, std::string(1, f), ""); }
     }
-        return;
+    return;
 }

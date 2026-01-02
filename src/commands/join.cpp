@@ -22,12 +22,6 @@ void Server::join(Client *c, const Command &command)
     const std::vector<std::string> channelNames = _parser.splitByComma(channelsRaw);
     std::vector<std::string> keys;
 
-    //TODO!!!!!!!!!
-    // if (channelNames.size() > 10) {
-    //     sendNumericReply(c, ERR_TOOMANYTARGETS, "", channelName);
-    //     return;
-    // }
-
     if (params.size() > 1)
     {
         const std::string &keysRaw = params[1];
@@ -41,7 +35,7 @@ void Server::join(Client *c, const Command &command)
             sendNumericReply(c, ERR_BADCHANMASK, "", channelName);
             continue;
         }
-        if (c->getChannelSize() >= 10) {
+        if (c->getChannelsSize() >= 10) {
             sendNumericReply(c, ERR_TOOMANYCHANNELS, "", channelName);
             continue;
         }
