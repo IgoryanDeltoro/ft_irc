@@ -22,5 +22,6 @@
 # include <utility>
 # include <set>
 # include <deque>
+# include <locale>
 
 #endif
