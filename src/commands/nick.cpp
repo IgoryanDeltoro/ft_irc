@@ -2,7 +2,7 @@
 
 void Server::nick(Client *c, const Command &command) {
     if (!c->getPassStatus()) {
-        std::cout << "NICK " MAGENTA << c->buildPrefix() << RED " password not set!\n" RESET;
+        std::cout << MAGENTA << c->buildPrefix() << RED " password not set!\n" RESET;
         return;
     }
 
@@ -56,7 +56,7 @@ void Server::nick(Client *c, const Command &command) {
         c->addNickHistory(currentNickLower);
         _nicks[newNickLower] = c;
 
-        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " << newNickLower << " to _nicks" << std::endl;
+        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " (" << newNickLower << ")" << std::endl;
     }
 
     const std::string msg = ":" + currentNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";

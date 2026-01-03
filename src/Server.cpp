@@ -2,7 +2,7 @@
 
 sig_atomic_t signaled = 1;
 
-Server::Server(const std::string &port, const std::string &password) : _debug(DEBUG), _listen_fd(-1), 
+Server::Server(const std::string& port, const std::string& password) : _debug(DEBUG), _creationDate(time(NULL)), _listen_fd(-1),
     _last_timeout_check(time(NULL)), _port(port), _password(password), _serverName("irc.server")
 {
     _listen_fd = create_and_bind();
@@ -227,3 +227,5 @@ void Server::process_line(Client *c, std::string &line)
         };
     }
 }
+
+const time_t &Server::getCreationDate() const { return _creationDate; }

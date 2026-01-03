@@ -81,11 +81,15 @@ void Server::sendWelcome(Client *c)
 {
     std::string nick = c->getNick();
 
+    char buf[64];
+    std::tm* tm = std::localtime(&getCreationDate());
+    std::strftime(buf, sizeof(buf), "%a %b %d %H:%M:%S %Y", tm);
+
     c->enqueue_reply(":" + _serverName + " 001 " + nick + " :Welcome to the Internet Relay Network " + c->buildPrefix() + "\r\n");
     c->enqueue_reply(":" + _serverName + " 002 " + nick + " :Your host is " + _serverName + ", running version 1.0\r\n");
-    c->enqueue_reply(":" + _serverName + " 003 " + nick + " :This server was created today\r\n");
+    c->enqueue_reply(":" + _serverName + " 003 " + nick + " :This server was created " + std::string(buf) + "\r\n");
     c->enqueue_reply(":" + _serverName + " 004 " + nick + " " + _serverName + " 1.0 a itkol\r\n");
-    c->enqueue_reply(":" + _serverName + " 375 " + nick + " :- " + _serverName + " Message of the day - \r\n");
+    c->enqueue_reply(":" + _serverName + " 375 " + nick + " :- " + _serverName + " Message of the day -\r\n");
     c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- Enjoy your conversation!\r\n");
     c->enqueue_reply(":" + _serverName + " 372 " + nick + " :- Type HELP to see all available commands.\r\n");
     c->enqueue_reply(":" + _serverName + " 376 " + nick + " :End of /MOTD command\r\n");

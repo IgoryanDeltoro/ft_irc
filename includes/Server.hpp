@@ -17,6 +17,7 @@ class Command;
 class Server {
     private:
         bool                            _debug;
+        time_t                          _creationDate;
         time_t                          _listen_fd;
         time_t                          _last_timeout_check;
         Parser                          _parser;
@@ -87,6 +88,7 @@ class Server {
         ~Server();
         
         void                            run();
+        const time_t                    &getCreationDate() const;
 };
 
 #endif
