@@ -3,7 +3,7 @@
 sig_atomic_t signaled = 1;
 
 Bot::Bot(const std::string &ip, const std::string &port, const std::string &password) : _ip(ip),  _port(port), 
-  _password(password), _nick("ircBot"), _connected_fd(-1), _ping_time(time(NULL)) {
+  _password(password), _nick("ircBot"), _connected_fd(-1) {
 
   _connected_fd = getsocketfd();
   if (_connected_fd == -1) throw std::runtime_error("Error: connection");
@@ -50,7 +50,9 @@ int Bot::getsocketfd() {
   }
 
 void Bot::run() 
-{ 
+{
+    std::cout << "\nBot has been run..." << std::endl;
+
     signal(SIGQUIT, SIG_IGN);
     signal(SIGINT, stop_listen);
 
@@ -67,8 +69,6 @@ void Bot::run()
             if (errno == EINTR) continue;
             throw std::runtime_error("poll faild");
         }
-
-        ping();
 
         if (_pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) {
             break;
@@ -153,21 +153,6 @@ Bot::parse_incoming_msg(const std::string &line)
 			res["sender"] = line.substr(1, e - 1);
 		}
         pos = end + 1;
-    } 
-    else 
-    {
-        if (line.find("PONG") != std::string::npos)
-        {
-            size_t end = line.find(" ");
-            if (end != std::string::npos) 
-            {
-                res["cmd"] = line.substr(pos, end);
-                res["sender"] = line.substr(end + 1);
-                return res;
-            }
-        }
-        res.clear();
-        return res;
     }
 
     size_t end = line.find(' ', pos);
@@ -203,9 +188,11 @@ Bot::parse_incoming_msg(const std::string &line)
 }
 
 
-const std::string &Bot::get_param(std::map<std::string, std::string> &t, const std::string &str) {
+const std::string &Bot::get_param(std::map<std::string, std::string> &t, const std::string &str) 
+{
     std::map<std::string, std::string>::iterator it = t.begin();
-    for (; it != t.end(); ++it) {
+    for (; it != t.end(); ++it) 
+    {
       if (it->first == str) return it->second;
     }
     return str;
@@ -222,25 +209,36 @@ void Bot::handleLine(const std::string &line)
 	std::string prefix  = get_param(t, "prefix");
 	std::string sender  = get_param(t, "sender");
 
-    if (cmd == "001") _serv_name = prefix;
-    else if (cmd == "INVITE") invite(channel);
-    else if (cmd == "PRIVMSG") {
+    if (cmd == "001") 
+    {
+        _serv_name = prefix;
+    }
+    else if (cmd == "INVITE") 
+    {
+        invite(channel);
+    }
+    else if (cmd == "PRIVMSG") 
+    {
         std::string target = (channel == "channel") ? sender : channel;
         privmsg(target, msg);
-    } else if (cmd == "PONG") pong(sender);
-
+    } 
+    else if (cmd == "PING") 
+    {
+        ping(msg);
+    }
     t.clear();
 }
 
-void Bot::invite(const std::string &channel) {
+void Bot::invite(const std::string &channel) 
+{
     if (channel == "channel") return ;
     _send_buffer += "JOIN " + channel + "\r\n";
     _send_buffer += "PRIVMSG " + channel + " :Hello 👋 I am an irc bot\r\n";
-
     _pfd.events |= POLLOUT;
 }
 
-void Bot::privmsg(const std::string &target, const std::string &msg) {
+void Bot::privmsg(const std::string &target, const std::string &msg) 
+{
     if (msg == "hello" || msg == "hi") 
     {
         _send_buffer += "PRIVMSG " + target + " :Hi there 👋, I am an IRC bot\r\n";
@@ -261,24 +259,12 @@ void Bot::privmsg(const std::string &target, const std::string &msg) {
     _pfd.events |= POLLOUT;
 }
 
-void Bot::pong(const std::string &sender) 
+void Bot::ping(const std::string &name) 
 {
-    if (_serv_name.empty() || sender != _serv_name) 
-        raise(2);
-        
-    time_t t = time(NULL);
-    if (t - _ping_time > _pong_recv_time)
-        raise(2);
-}
+    if (name.size() < 1 || _serv_name != name) return;
 
-void Bot::ping() {
-    int curr_time = time(NULL);
-    if (curr_time - _ping_time > _ping_wind) 
-    {
-        _send_buffer += "PING " +_serv_name + "\r\n";
-        _pfd.events |= POLLOUT;
-        _ping_time = curr_time;
-    }
+    _send_buffer += "PONG :" + name + "\r\n";
+    _pfd.events |= POLLOUT;
 }
 
 Bot::~Bot() 

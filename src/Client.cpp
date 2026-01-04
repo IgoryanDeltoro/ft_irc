@@ -1,12 +1,13 @@
 #include "../includes/Client.hpp"
 
 Client::Client(int fd, const std::string &host) : _fd(fd), _host(host), _last_activity(time(NULL)),
-    _is_registred(false), _pass_ok(false), _away(false), _isQuit(false) {}
+    _pong_status(false), _is_registred(false), _pass_ok(false), _away(false), _isQuit(false) {}
 bool                    Client::operator!=(const Client &c) const { return _fd != c._fd; }
 Client::~Client() {}
 
 int                     Client::getFD() const { return this->_fd; }
 int                     Client::getLastActivity() const { return _last_activity; };
+bool                     Client::getPongStatus() const { return _pong_status; };
 const std::string       &Client::getNick() const { return this->_nick; }
 const std::string       &Client::getNickLower() const { return this->_nickLower; }
 const std::string       &Client::getOldNickLower() const { return this->_oldNickLower; }
@@ -33,6 +34,7 @@ void                    Client::setUserName(const std::string &userName) { _user
 void                    Client::setRealName(const std::string &realName) { _realName = realName; }
 void                    Client::setRegStatus(bool status) { _is_registred = status; }
 void                    Client::setLastActivity(const int &t) { _last_activity = t; };
+void                    Client::setPongStatus(bool t) { _pong_status = t; };
 
 std::string             Client::buildPrefix() const { return ":" + _nick + "!" + _userName + "@" + _host; }
 void                    Client::addToChannel(const std::string &name) { _channels.insert(name); }

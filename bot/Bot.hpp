@@ -24,15 +24,11 @@ class Bot {
         struct sockaddr_in                  _serv_addr;
         struct pollfd                       _pfd;
         int                                 _connected_fd;
-        int                                 _ping_time;
-
-        static const int                    _ping_wind = 60;
-        static const int                    _pong_recv_time = 2;
 
         void                                invite(const std::string &);
         void                                privmsg(const std::string &, const std::string &);
         void                                pong(const std::string &);
-        void                                ping();
+        void                                ping(const std::string &);
         int                                 getsocketfd();
         void                                handleLine(const std::string &);
         int                                 read_income_msg();

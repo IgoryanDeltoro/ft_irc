@@ -1,16 +1,10 @@
 #include "../../includes/Server.hpp"
 
-void Server::ping(Client *c, const Command &command)
+void Server::ping(Client *c)
 {
-    const std::vector<std::string> &params = command.getParams();
-    if (params.size() < 1) {
-        sendNumericReply(c, ERR_NOORIGIN, "", "");
-        return;
-    }
-    if (params[0] != _serverName) {
-        sendNumericReply(c, ERR_NOSUCHSERVER, params[0], "");
-        return;
-    }
-    c->enqueue_reply("PONG " + _serverName + "\r\n");
+    if (!c) return;
+
+    c->setPongStatus(true);
+    c->enqueue_reply("PING :" + _serverName + "\r\n");
     set_event_for_sending_msg(c->getFD(), true);
 }
