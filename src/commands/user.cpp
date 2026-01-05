@@ -36,6 +36,5 @@ void Server::user(Client *c, const Command &command)
     if (!c->getNick().empty() && c->getPassStatus()) {
         c->setRegStatus(true);
         sendWelcome(c);
-        std::cout << MAGENTA << c->buildPrefix() << GREEN " registered and welcome sent!" RESET << std::endl;
     }
 }

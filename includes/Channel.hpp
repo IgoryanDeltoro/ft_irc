@@ -74,6 +74,8 @@ class Channel {
         const std::string               &getTopicSetter() const;
         const int                       &getTopicTimestamp() const;
         const std::string               getNamesList() const;
+        Client                          *getUserbyNickHistory(const std::string &nickLower);
+        Client                          *findUserWithHistory(const std::string &nickLower);
 };
 
 #endif

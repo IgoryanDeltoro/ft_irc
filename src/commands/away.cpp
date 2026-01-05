@@ -2,9 +2,6 @@
 
 void Server::away(Client *c, const Command &cmd)
 {
-    if (!c->getRegStatus())
-        return;
-
     if (!cmd.hasTrailing()) {
         c->unsetAway();
         sendNumericReply(c, RPL_UNAWAY, "", "");

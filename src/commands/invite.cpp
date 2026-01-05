@@ -2,8 +2,6 @@
 
 void Server::invite(Client *c, const Command &command)
 {
-    if (!isClientAuth(c))
-        return;
     const std::vector<std::string> &params = command.getParams();
     if (params.size() < 2) {
         sendNumericReply(c, ERR_NEEDMOREPARAMS, "INVITE", "");
@@ -20,8 +18,11 @@ void Server::invite(Client *c, const Command &command)
         return;
     }
 
+    Channel *ch = NULL;
     if (_channels.count(channelLower)) {
-        Channel *ch = _channels[channelLower];
+        ch = _channels[channelLower];
+    }
+    if (ch) {
         if (!ch->isUser(c->getNickLower())) {
             sendNumericReply(c, ERR_NOTONCHANNEL, "", ch->getName());
             return;
@@ -34,10 +35,12 @@ void Server::invite(Client *c, const Command &command)
             sendNumericReply(c, ERR_USERONCHANNEL, invitee->getNick(), ch->getName());
             return;
         }
-        if (!ch->isInvited(nickLower)) ch->addInvite(nickLower);
+        if (!ch->isInvited(nickLower)) {
+            ch->addInvite(nickLower);
+        }
     }
 
-    const std::string msg = c->buildPrefix() + " INVITE " + invitee->getNick() + " " + channel + "\r\n";
+    const std::string msg = ":" + c->buildPrefix() + " INVITE " + invitee->getNick() + " " + channel + "\r\n";
     invitee->enqueue_reply(msg);
     set_event_for_sending_msg(invitee->getFD(), true);
 

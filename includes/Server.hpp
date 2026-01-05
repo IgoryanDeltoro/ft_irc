@@ -3,7 +3,6 @@
 
 # include "Libraries.hpp"
 # include "NumericReplies.hpp"
-# include "MacroConstant.hpp"
 # include "Parser.hpp"
 # include "Client.hpp"
 # include "Channel.hpp"
@@ -17,6 +16,7 @@ class Command;
 class Server {
     private:
         bool                            _debug;
+        time_t                          _creationDate;
         time_t                          _listen_fd;
         time_t                          _last_timeout_check;
         Parser                          _parser;
@@ -66,6 +66,8 @@ class Server {
         void                            invite(Client *, const Command &);
         void                            cap(Client *, const Command &);
         void                            privmsg(Client *, const Command &);
+        void                            part(Client *, const Command &);
+        // void                            ping(Client *, const Command &);
         void                            ping(Client *);
         void                            pong(Client *, const Command &);
         void                            print_debug_message(Client *, const Command &);
@@ -79,15 +81,18 @@ class Server {
         void                            sendNumericReply(Client *c, NumericReply err, const std::string &arg, const std::string &channel);
         void                            applyChannelMode(Client *c, Channel *channel, char f, bool adding, std::vector<std::string> &args, 
                                             size_t &argIndex, std::string &addModeStr, std::string &removeModeStr, std::vector<std::string> &addModeArgs,
-                                            std::vector<std::string> &removeModeArgs, int &oLimit);
+                                            std::vector<std::string> &removeModeArgs, int &paramLimit);
         void                            away(Client *c, const Command &cmd);
         void                            quit(Client *c, const Command &command);
-
+        void                            partFromChannel(Client *c, Channel *ch, const std::string &msg);
+        void                            kickFromChannel(Client *c, Channel *ch, Client *target, const std::string &comment);
     public:
         Server(const std::string &port, const std::string &password);
         ~Server();
         
         void                            run();
+        const time_t                    &getCreationDate() const;
 };
 
 #endif
+

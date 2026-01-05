@@ -21,9 +21,8 @@ void Server::sendNumericReply(Client *c, NumericReply r, const std::string &arg,
     out << r;
     num = out.str();
 
-    std::cout << YELLOW "sending " RED<< num << RESET " " GREEN << c->buildPrefix() << RESET " : " + message + "\n";
-
-    c->enqueue_reply( ":" + _serverName + " " + num + " " + nick + " " + message + "\r\n");
+    std::string msgToClient = ":" + _serverName + " " + num + " " + nick + " " + message + "\r\n";
+    c->enqueue_reply(msgToClient);
     set_event_for_sending_msg(c->getFD(), true);
 }
 
@@ -48,7 +47,7 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case ERR_CHANOPRIVSNEEDED: return "<channel> :You're not channel operator";
     case RPL_NOTOPIC: return "<channel> :No topic is set";
     case ERR_NOTONCHANNEL: return "<channel> :You're not on that channel";
-    // case ERR_NOTREGISTERED: return ": User has not registration";
+    case ERR_NOTREGISTERED: return ":You have not registered";
     case ERR_BANNEDFROMCHAN: return "<channel> :Cannot join channel (+b)";
     case ERR_INVITEONLYCHAN: return "<channel> :Cannot join channel (+i)";
     case ERR_BADCHANNELKEY: return "<channel> :Cannot join channel (+k)";
@@ -65,9 +64,8 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case ERR_NORECIPIENT: return ":No recipient given (PRIVMSG)";
     case ERR_NOTEXTTOSEND: return ":No text to send";
     case ERR_CANNOTSENDTOCHAN: return "<channel> :Cannot send to channel";
-    case ERR_NOTOPLEVEL: return "<mask> :No toplevel domain specified"; // Если клиент отправляет PRIVMSG на некорректный канал/хост.
-    case ERR_TOOMANYTARGETS: return "<target> :Duplicate recipients. No message delivered"; //<target> — это первый из дублирующихся или превышающих лимит получателей.
-    case ERR_NOSUCHNICK: return "<nick> :No such nick/channel";
+    case ERR_NOTOPLEVEL: return "<mask> :No toplevel domain specified";
+    case ERR_TOOMANYTARGETS: return "<target> :too many recipients. No message delivered";
     default: return ":Error";
     }
 }
