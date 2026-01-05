@@ -32,6 +32,7 @@ SRC =	$(SRC_DIRS)/main.cpp			\
 		$(SRC_DIRS)/commands/nick.cpp	\
 		$(SRC_DIRS)/commands/pass.cpp	\
 		$(SRC_DIRS)/commands/ping.cpp	\
+		$(SRC_DIRS)/commands/pong.cpp	\
 		$(SRC_DIRS)/commands/topic.cpp	\
 		$(SRC_DIRS)/commands/user.cpp	\
 		$(SRC_DIRS)/commands/privMsg.cpp\

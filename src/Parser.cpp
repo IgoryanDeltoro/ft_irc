@@ -157,7 +157,7 @@ Commands Parser::mapCommand(const std::string &cmd) const
     if (cmd == "INVITE") return INVITE;
     if (cmd == "PRIVMSG") return PRIVMSG;
     if (cmd == "CAP") return CAP;
-    if (cmd == "PING") return PING;
+    if (cmd == "PONG") return PONG;
     if (cmd == "HELP") return HELP;
     if (cmd == "AWAY") return AWAY;
     if (cmd == "PART") return PART;

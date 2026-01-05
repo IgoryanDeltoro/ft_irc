@@ -28,7 +28,11 @@ void Server::check_timeouts()
     std::map<int, Client *>::iterator it = _clients.begin();
     for (; it != _clients.end(); ++it)
     {
-        if (nt - it->second->getLastActivity() > client_idle_timeout)
+        Client *c = it->second; 
+        if (!c->getPongStatus() && nt - c->getLastActivity() > ping_interval)
+            ping(c);
+
+        if (nt - c->getLastActivity() > ping_timeout && c->getPongStatus())
             to_close.push_back(it->first);
     }
     for (size_t i = 0; i < to_close.size(); i++)

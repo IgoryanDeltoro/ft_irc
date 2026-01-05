@@ -217,7 +217,7 @@ void Server::process_line(Client *c, std::string &line)
         case INVITE: invite(c, cmnd); break;
         case CAP: cap(c, cmnd); break;
         case PRIVMSG: privmsg(c, cmnd); break;
-        case PING: ping(c, cmnd); break;
+        case PONG: pong(c, cmnd); break;
         case AWAY: away(c, cmnd); break;
         case PART: part(c, cmnd); break;
         case QUIT: quit(c, cmnd); break;
