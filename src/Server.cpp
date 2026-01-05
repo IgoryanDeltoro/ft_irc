@@ -167,7 +167,7 @@ void Server::eccept_new_fd()
 
 void Server::process_line(Client *c, std::string &line)
 {
-    std::cout << YELLOW "resive from " GREEN << c->buildPrefix() << RESET ": " << line << std::endl;
+    std::cout << YELLOW "resive from " GREEN << c->buildPrefix() << RESET " " << line << std::endl;
 
     if (line.empty() || line.size() > 510) return;
     Command cmnd = _parser.parse(line);
@@ -229,3 +229,4 @@ void Server::process_line(Client *c, std::string &line)
 }
 
 const time_t &Server::getCreationDate() const { return _creationDate; }
+

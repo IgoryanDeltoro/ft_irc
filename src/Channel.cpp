@@ -75,6 +75,11 @@ void Channel::setL(const int &limit) {
 }
 
 void Channel::broadcast(Client *from, const std::string &msg) {
+    std::cout << CYAN "sending broadcast" RESET << " in " << getName();
+    if (from)  std::cout << " (without msg to client)";
+    else std::cout << " (with msg to client)";
+    std::cout << std::endl;
+
     std::map<std::string, Client*>::iterator it = _users.begin();
     for (; it != _users.end(); ++it) {
         if (from && from->getFD() == it->second->getFD()) continue;

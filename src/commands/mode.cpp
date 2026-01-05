@@ -135,6 +135,10 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
             }
             int lim;
             std::string limStr = args[argIndex++];
+            for (size_t i = 0; i < limStr.size(); i++) {
+                if (!_parser.isNumber(limStr[i]))
+                    return;
+            }
             std::istringstream iss(limStr);
             if (!(iss >> lim)) return;
             if (lim <= 0) return;
@@ -142,7 +146,6 @@ void Server::applyChannelMode(Client *c, Channel *channel, char f, bool adding, 
             addModeStr += 'l';
             addModeArgs.push_back(limStr);
             paramLimit++;
-
         }
         else {
             if (!channel->isL()) return;

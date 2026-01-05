@@ -31,12 +31,11 @@ void Server::nick(Client *c, const Command &command) {
         c->setNickLower(newNickLower);
         _nicks[newNickLower] = c;
         
-        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " + add " << newNickLower << " to _nicks" << std::endl;
+        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " << newNick << " (" << newNickLower << ")" << std::endl;
 
         if (!c->getUserName().empty() && !c->getRealName().empty()) {
             c->setRegStatus(true);
             sendWelcome(c);
-            std::cout << MAGENTA << c->buildPrefix() << GREEN " registered!" RESET << std::endl;
         }
         return;
     }
@@ -56,7 +55,7 @@ void Server::nick(Client *c, const Command &command) {
         c->addNickHistory(currentNickLower);
         _nicks[newNickLower] = c;
 
-        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " GREEN << newNick << RESET " (" << newNickLower << ")" << std::endl;
+        std::cout << MAGENTA << c->buildPrefix() << RESET " set nick: " << newNick << " (" << newNickLower << ")" << std::endl;
     }
 
     const std::string msg = ":" + currentNick + "!" + c->getUserName() + "@" + c->getHost() + " NICK " + newNick + "\r\n";

@@ -23,5 +23,6 @@
 # include <set>
 # include <deque>
 # include <locale>
+# include "MacroConstant.hpp"
 
 #endif

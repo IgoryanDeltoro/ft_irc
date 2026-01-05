@@ -9,7 +9,6 @@ int                     Client::getFD() const { return this->_fd; }
 int                     Client::getLastActivity() const { return _last_activity; };
 const std::string       &Client::getNick() const { return this->_nick; }
 const std::string       &Client::getNickLower() const { return this->_nickLower; }
-// const std::string       &Client::getOldNickLower() const { return this->_oldNickLower; }
 const std::string       &Client::getUserName() const { return this->_userName; }
 const std::string       &Client::getRealName() const { return this->_realName; }
 std::string             &Client::getRecvBuff() { return this->_recv_buff; }
@@ -28,7 +27,6 @@ void                    Client::setPassStatus(bool status) { _pass_ok = status; 
 void                    Client::setCmdTimeStamps(const int &t) { _cmd_timestamps.push_back(t); }
 void                    Client::setNick(const std::string &nick) { _nick = nick; }
 void                    Client::setNickLower(const std::string &nick) { _nickLower = nick; }
-// void                    Client::setOldNickLower(const std::string &nick) { _oldNickLower = nick; }
 void                    Client::setUserName(const std::string &userName) { _userName = userName; }
 void                    Client::setRealName(const std::string &realName) { _realName = realName; }
 void                    Client::setRegStatus(bool status) { _is_registred = status; }
@@ -38,7 +36,10 @@ std::string             Client::buildPrefix() const { return _nick + "!" + _user
 
 void                    Client::addToChannel(const std::string &name) { _channels.insert(name); }
 void                    Client::removeChannel(const std::string &name) { _channels.erase(name); }
-void                    Client::enqueue_reply(const std::string &msg) { _send_msg.push_back(msg); }
+void                    Client::enqueue_reply(const std::string &msg) { 
+    _send_msg.push_back(msg);
+    std::cout << CYAN "sending  to " GREEN << buildPrefix() << RESET " " + msg;
+}
 
 bool                    Client::isAway() const { return _away; }
 bool                    Client::isQuit() const { return _isQuit; }

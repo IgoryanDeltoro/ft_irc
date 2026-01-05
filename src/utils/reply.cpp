@@ -24,8 +24,6 @@ void Server::sendNumericReply(Client *c, NumericReply r, const std::string &arg,
     std::string msgToClient = ":" + _serverName + " " + num + " " + nick + " " + message + "\r\n";
     c->enqueue_reply(msgToClient);
     set_event_for_sending_msg(c->getFD(), true);
-
-    std::cout << YELLOW "sending  to " GREEN << c->buildPrefix() << RESET ": " + msgToClient;
 }
 
 std::string Server::getNumericReplyText(const NumericReply &r)
@@ -66,7 +64,7 @@ std::string Server::getNumericReplyText(const NumericReply &r)
     case ERR_NORECIPIENT: return ":No recipient given (PRIVMSG)";
     case ERR_NOTEXTTOSEND: return ":No text to send";
     case ERR_CANNOTSENDTOCHAN: return "<channel> :Cannot send to channel";
-    case ERR_NOTOPLEVEL: return "<mask> :No toplevel domain specified"; // Если клиент отправляет PRIVMSG на некорректный канал/хост.
+    case ERR_NOTOPLEVEL: return "<mask> :No toplevel domain specified";
     case ERR_TOOMANYTARGETS: return "<target> :too many recipients. No message delivered";
     default: return ":Error";
     }

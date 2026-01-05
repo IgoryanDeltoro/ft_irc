@@ -3,7 +3,6 @@
 
 # include "Libraries.hpp"
 # include "NumericReplies.hpp"
-# include "MacroConstant.hpp"
 # include "Parser.hpp"
 # include "Client.hpp"
 # include "Channel.hpp"

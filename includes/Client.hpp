@@ -17,7 +17,6 @@ class Client {
         bool                        _pass_ok;
         std::string                 _nick;
         std::string                 _nickLower;
-        // std::string                 _oldNickLower;
         std::deque<NickHistory>     _nickHistory;
         std::string                 _userName;
         std::string                 _realName;
@@ -43,7 +42,6 @@ class Client {
         const std::string           &getNick() const;
         const std::string           &getHost() const;
         const std::string           &getNickLower() const;
-        // const std::string           &getOldNickLower() const;
         const std::string           &getUserName() const;
         const std::string           &getRealName() const;
         const std::set<std::string> &getChannels() const;
@@ -57,7 +55,6 @@ class Client {
         void                        setPassStatus(bool);
         void                        setNick(const std::string &nick);
         void                        setNickLower(const std::string &nick);
-        // void                        setOldNickLower(const std::string &nick);
         void                        addNickHistory(const std::string &oldNick);
         void                        setUserName(const std::string &user);
         void                        setRealName(const std::string &user);
