@@ -15,7 +15,6 @@ class Command;
 
 class Server {
     private:
-        bool                            _debug;
         time_t                          _creationDate;
         time_t                          _listen_fd;
         time_t                          _last_timeout_check;
@@ -29,7 +28,6 @@ class Server {
         std::vector<struct pollfd>      _pfds;
 
         static const int                timeout_interval = 5; 
-        // static const int                client_idle_timeout = 300;
         static const int                ping_interval = 60;
         static const int                ping_timeout = 120;
         static const int                flood_win = 10; 
@@ -67,10 +65,9 @@ class Server {
         void                            cap(Client *, const Command &);
         void                            privmsg(Client *, const Command &);
         void                            part(Client *, const Command &);
-        // void                            ping(Client *, const Command &);
-        void                            ping(Client *);
+        void                            ping(Client *, const Command &);
+        void                            sendPing(Client *);
         void                            pong(Client *, const Command &);
-        void                            print_debug_message(Client *, const Command &);
         bool                            isClientAuth(Client *);
         bool                            isNickExists(const std::string &);
         void                            joinChannel(Client *, const std::string &, const std::string &);

@@ -2,7 +2,7 @@
 
 sig_atomic_t signaled = 1;
 
-Server::Server(const std::string& port, const std::string& password) : _debug(DEBUG), _creationDate(time(NULL)), _listen_fd(-1),
+Server::Server(const std::string& port, const std::string& password) : _creationDate(time(NULL)), _listen_fd(-1),
     _last_timeout_check(time(NULL)), _port(port), _password(password), _serverName("irc.server")
 {
     _listen_fd = create_and_bind();
@@ -172,8 +172,6 @@ void Server::process_line(Client *c, std::string &line)
     if (line.empty() || line.size() > 510) return;
     Command cmnd = _parser.parse(line);
 
-    print_debug_message(c, cmnd);
-    
     if (cmnd.hasPrefix()) {
         if (!c->getRegStatus())
             return;
@@ -185,6 +183,7 @@ void Server::process_line(Client *c, std::string &line)
             return;
     }
     if (cmnd.getCommand() == NOT_VALID) { 
+        std::cout << MAGENTA << c->buildPrefix() << RED " NOT VALID" RESET << std::endl;
         return;
     }
 
@@ -196,6 +195,7 @@ void Server::process_line(Client *c, std::string &line)
             case USER: user(c, cmnd); break;
             case CAP: cap(c, cmnd); break;
             case PING: ping(c, cmnd); break;
+            case PONG: pong(c, cmnd); break;
             case QUIT: quit(c, cmnd); break;
             default: {
                 sendNumericReply(c, ERR_NOTREGISTERED, "", "");
@@ -218,6 +218,7 @@ void Server::process_line(Client *c, std::string &line)
         case CAP: cap(c, cmnd); break;
         case PRIVMSG: privmsg(c, cmnd); break;
         case PONG: pong(c, cmnd); break;
+        case PING: ping(c, cmnd); break;
         case AWAY: away(c, cmnd); break;
         case PART: part(c, cmnd); break;
         case QUIT: quit(c, cmnd); break;

@@ -22,9 +22,8 @@ void Server::read_message_from(Client *c)
             {
                 std::string line = c->getRecvBuff().substr(0, pos);
                 c->getRecvBuff().erase(0, pos + 2); 
-                
+
                 if (flood_protection(c, curr_time) == -1) return;
-                sanitize_msg(line);
                 
                 process_line(c, line);
                 
