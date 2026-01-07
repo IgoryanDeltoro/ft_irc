@@ -30,7 +30,7 @@ void Server::check_timeouts()
     {
         Client *c = it->second; 
         if (!c->getPongStatus() && nt - c->getLastActivity() > ping_interval)
-            ping(c);
+            sendPing(c);
 
         if (nt - c->getLastActivity() > ping_timeout && c->getPongStatus())
             to_close.push_back(it->first);
@@ -99,22 +99,6 @@ void Server::sendWelcome(Client *c)
     c->enqueue_reply(":" + _serverName + " 376 " + nick + " :End of /MOTD command\r\n");
 
     set_event_for_sending_msg(c->getFD(), true);
-}
-
-void Server::print_debug_message(Client *c, const Command &cmnd)
-{
-    if (_debug) 
-    {
-        print_message("Incoming MSG", " FROM", GREEN, YELLOW);
-        std::string from = c->getNick().empty() ? " * " : c->getNick();
-        print_message("[" + from + "]" RED " ==>> ", "{", YELLOW, YELLOW);
-        print_message("  [ CMD  ]----| ", cmnd.getCommandStr(), MAGENTA, CYAN);
-        std::vector<std::string>::const_iterator p = cmnd.getParams().begin();
-        for (; p != cmnd.getParams().end(); ++p)
-            print_message("  [TARGET]---------| ", *p, MAGENTA, CYAN);
-        print_message("  [ TEXT ]----------------| ", cmnd.getText(), MAGENTA, CYAN);
-        print_message("}", "", YELLOW, NULL);
-    }
 }
 
 void Server::sanitize_msg(std::string &msg)

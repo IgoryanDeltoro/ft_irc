@@ -19,6 +19,7 @@ enum Commands
     PRIVMSG,
     CAP,
     PONG,
+    PING,
     AWAY,
     PART,
     QUIT
